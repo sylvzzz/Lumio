@@ -1,0 +1,8 @@
+django>=5.2
+djangorestframework>=3.17
+django-cors-headers>=4.9
+python-decouple>=3.8
+psycopg2-binary>=2.9
+pgvector>=0.3.0
+requests>=2.32.0
+PyPDF2>=3.0
