@@ -22,5 +22,6 @@ router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/search/', include('chat.search_urls')),
     path('api-auth/', include('rest_framework.urls')),
 ]

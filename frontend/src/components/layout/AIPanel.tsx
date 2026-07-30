@@ -1,19 +1,41 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Send, Plus } from 'lucide-react'
-import { api } from '@/lib/api'
+import { api, type ChatMessage } from '@/lib/api'
 import { useChatSessions } from '@/hooks/use-chat'
 import { useQueryClient } from '@tanstack/react-query'
+
+interface LocalMessage {
+  id: string
+  session: string
+  role: 'user' | 'assistant'
+  content: string
+  sources: unknown[]
+  created_at: string
+  optimistic?: boolean
+}
 
 export function AIPanel() {
   const { data: sessions, isLoading } = useChatSessions()
   const queryClient = useQueryClient()
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [localMessages, setLocalMessages] = useState<LocalMessage[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const currentSession = sessions?.[0]
-  const messages = currentSession?.messages ?? []
+  const serverMessages: LocalMessage[] = (currentSession?.messages ?? []).map(m => ({
+    ...m,
+    session: m.session,
+  }))
+
+  const messages = localMessages.length > 0 ? localMessages : serverMessages
+
+  useEffect(() => {
+    if (!sending && localMessages.length > 0) {
+      setLocalMessages([])
+    }
+  }, [serverMessages.length])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -26,21 +48,59 @@ export function AIPanel() {
     return session
   }
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     const text = input.trim()
     if (!text || sending) return
     setInput('')
     setSending(true)
 
+    const tempId = `temp-${Date.now()}`
+    const optimisticMsg: LocalMessage = {
+      id: tempId,
+      session: currentSession?.id || '',
+      role: 'user',
+      content: text,
+      sources: [],
+      created_at: new Date().toISOString(),
+      optimistic: true,
+    }
+
+    setLocalMessages(prev => [...(prev.length > 0 ? prev : serverMessages), optimisticMsg])
+
     try {
       const session = await ensureSession()
-      await api.chat.sendMessage(session.id, text)
+      const res = await api.chat.sendMessage(session.id, text)
+
+      setLocalMessages(prev => {
+        const base = prev.filter(m => m.id !== tempId)
+        const userMsg: LocalMessage = {
+          id: res.id,
+          session: res.session,
+          role: 'user',
+          content: res.content,
+          sources: res.sources,
+          created_at: res.created_at,
+        }
+        const msgs = [...base, userMsg]
+        if (res.ai_response) {
+          msgs.push({
+            id: res.ai_response.id,
+            session: res.ai_response.session,
+            role: 'assistant',
+            content: res.ai_response.content,
+            sources: res.ai_response.sources,
+            created_at: res.ai_response.created_at,
+          })
+        }
+        return msgs
+      })
+
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
     } catch (e) {
       console.error('Failed to send message', e)
     }
     setSending(false)
-  }
+  }, [input, sending, currentSession, serverMessages, queryClient])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -51,6 +111,7 @@ export function AIPanel() {
 
   const handleNewChat = async () => {
     await api.chat.createSession()
+    setLocalMessages([])
     queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
   }
 
@@ -83,7 +144,7 @@ export function AIPanel() {
       </motion.div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-        {!currentSession && !isLoading && (
+        {!currentSession && !isLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <Sparkles className="w-8 h-8 text-accent/30 mb-3" strokeWidth={1} />
             <p className="text-[13px] text-muted-foreground">Ask me anything about your notes, documents, or emails.</p>

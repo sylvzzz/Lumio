@@ -94,3 +94,34 @@ class DocumentViewSet(viewsets.ModelViewSet):
             as_attachment=True,
             filename=doc.filename,
         )
+
+    @action(detail=True, methods=['get'], url_path='view')
+    def view_file(self, request, pk=None):
+        doc = self.get_object()
+        if not os.path.exists(doc.storage_path):
+            raise Http404('File not found')
+        content_type = {
+            'pdf': 'application/pdf',
+            'csv': 'text/csv',
+            'txt': 'text/plain',
+        }.get(doc.file_type, 'application/octet-stream')
+        resp = FileResponse(
+            open(doc.storage_path, 'rb'),
+            content_type=content_type,
+            filename=doc.filename,
+        )
+        resp['X-Frame-Options'] = 'SAMEORIGIN'
+        return resp
+        doc = self.get_object()
+        if not os.path.exists(doc.storage_path):
+            raise Http404('File not found')
+        content_type = {
+            'pdf': 'application/pdf',
+            'csv': 'text/csv',
+            'txt': 'text/plain',
+        }.get(doc.file_type, 'application/octet-stream')
+        return FileResponse(
+            open(doc.storage_path, 'rb'),
+            content_type=content_type,
+            filename=doc.filename,
+        )
