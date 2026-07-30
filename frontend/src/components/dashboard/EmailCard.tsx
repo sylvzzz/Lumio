@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Inbox } from 'lucide-react'
 import { useEmails } from '@/hooks/use-emails'
 
@@ -13,6 +13,7 @@ function timeAgo(iso: string) {
 }
 
 export function EmailCard() {
+  const shouldReduceMotion = useReducedMotion()
   const { data: emails, isLoading } = useEmails()
 
   if (isLoading) {
@@ -30,11 +31,11 @@ export function EmailCard() {
   const recent = emails?.slice(0, 4) ?? []
 
   return (
-    <motion.div
-      className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-all duration-200"
-      whileHover={{ y: -1 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-    >
+      <motion.div
+        className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
+        whileHover={shouldReduceMotion ? {} : { y: -1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      >
       <div className="flex items-center gap-2.5 mb-5">
         <Inbox className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
         <h2 className="text-[15px] font-semibold tracking-tight">Inbox</h2>
@@ -44,18 +45,18 @@ export function EmailCard() {
           <p className="text-[13px] text-muted-foreground">No emails yet</p>
         )}
         {recent.map((email) => (
-          <motion.div
-            key={email.id}
-            className="flex items-center gap-3 group cursor-pointer"
-            whileHover={{ x: 2 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          >
+            <motion.div
+              key={email.id}
+              className="flex items-center gap-3 group cursor-pointer"
+              whileHover={shouldReduceMotion ? {} : { x: 2 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            >
             {email.is_read ? (
               <div className="w-1.5 h-1.5 shrink-0" />
             ) : (
               <motion.div
                 className="w-1.5 h-1.5 rounded-full bg-accent shrink-0"
-                animate={{ scale: [1, 1.3, 1] }}
+                animate={shouldReduceMotion ? {} : { scale: [1, 1.3, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
               />
             )}

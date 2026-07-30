@@ -19,7 +19,7 @@ export function TasksCard() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-all duration-200">
+    <div className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
       <div className="flex items-center gap-2.5 mb-5">
         <CheckSquare className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
         <h2 className="text-[15px] font-semibold tracking-tight">Today's Tasks</h2>
@@ -30,7 +30,7 @@ export function TasksCard() {
             key={task.title}
             className="flex items-center gap-3 group cursor-pointer"
             onClick={() => toggle(i)}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.97 }}
             layout
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >

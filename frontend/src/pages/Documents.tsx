@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { FileText, FileSpreadsheet, Upload, Check } from 'lucide-react'
 import { api, type Document } from '@/lib/api'
 import { useDocuments } from '@/hooks/use-documents'
@@ -31,6 +31,7 @@ function formatSize(bytes: number) {
 }
 
 export function Documents() {
+  const shouldReduceMotion = useReducedMotion()
   const { data: docs, isLoading } = useDocuments()
   const queryClient = useQueryClient()
   const [dragging, setDragging] = useState(false)
@@ -91,7 +92,7 @@ export function Documents() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={handlePick}
-        className={`relative rounded-2xl border-2 border-dashed p-10 mb-8 text-center cursor-pointer transition-all duration-200 ${
+        className={`relative rounded-2xl border-2 border-dashed p-10 mb-8 text-center cursor-pointer transition-shadow duration-200 ${
           dragging
             ? 'border-accent bg-accent/5'
             : 'border-border/50 hover:border-border hover:bg-secondary/30'
@@ -109,9 +110,9 @@ export function Documents() {
           {uploading ? (
             <motion.div
               key="uploading"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
+              initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
+              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+              exit={shouldReduceMotion ? {} : { opacity: 0 }}
               className="flex flex-col items-center gap-3"
             >
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -122,9 +123,9 @@ export function Documents() {
           ) : uploadedName ? (
             <motion.div
               key="done"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
+              initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
+              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+              exit={shouldReduceMotion ? {} : { opacity: 0 }}
               className="flex flex-col items-center gap-3"
             >
               <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
@@ -136,9 +137,9 @@ export function Documents() {
           ) : (
             <motion.div
               key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={shouldReduceMotion ? {} : { opacity: 0 }}
+              animate={shouldReduceMotion ? {} : { opacity: 1 }}
+              exit={shouldReduceMotion ? {} : { opacity: 0 }}
               className="flex flex-col items-center gap-3"
             >
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -165,11 +166,16 @@ export function Documents() {
           ))}
         </div>
       ) : docs?.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4">
+        <motion.div
+          className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        >
           <FileText className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
           <p className="text-sm font-medium text-foreground">No documents yet</p>
           <p className="text-[13px] text-muted-foreground">Upload a file above to get started.</p>
-        </div>
+        </motion.div>
       ) : (
         <motion.div
           className="space-y-2"
@@ -181,35 +187,40 @@ export function Documents() {
           }}
         >
           <p className="text-[13px] text-muted-foreground mb-3">{docs?.length} document{docs?.length !== 1 ? 's' : ''}</p>
-          {docs?.map((doc) => {
-            const Icon = iconMap[doc.file_type] || FileText
-            const color = colorMap[doc.file_type] || 'text-muted-foreground'
-            return (
-              <motion.div
-                key={doc.id}
-                className="bg-white rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-all cursor-pointer"
-                variants={{
-                  hidden: { opacity: 0, y: 8 },
-                  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 20 } },
-                }}
-                whileHover={{ y: -1 }}
-                onClick={() => {
-                  setSelectedDoc(doc)
-                  setDetailOpen(true)
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Icon className={`w-5 h-5 ${color} shrink-0`} strokeWidth={1.5} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">{doc.filename}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {doc.file_type.toUpperCase()} · {formatSize(doc.file_size)} · {formatDate(doc.updated_at)}
-                    </p>
+          <AnimatePresence mode="popLayout">
+            {docs?.map((doc) => {
+              const Icon = iconMap[doc.file_type] || FileText
+              const color = colorMap[doc.file_type] || 'text-muted-foreground'
+              return (
+                <motion.div
+                  key={doc.id}
+                  layout
+                  className="bg-white rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 20 } },
+                  }}
+                  exit={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                  whileHover={shouldReduceMotion ? {} : { y: -1 }}
+                  whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+                  onClick={() => {
+                    setSelectedDoc(doc)
+                    setDetailOpen(true)
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-5 h-5 ${color} shrink-0`} strokeWidth={1.5} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">{doc.filename}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {doc.file_type.toUpperCase()} · {formatSize(doc.file_size)} · {formatDate(doc.updated_at)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )
-          })}
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
         </motion.div>
       )}
       <DocumentDetail

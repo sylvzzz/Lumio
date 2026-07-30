@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Sparkles, Send, Plus } from 'lucide-react'
-import { api, type ChatMessage } from '@/lib/api'
+import { api } from '@/lib/api'
 import { useChatSessions } from '@/hooks/use-chat'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -18,6 +18,7 @@ interface LocalMessage {
 export function AIPanel() {
   const { data: sessions, isLoading } = useChatSessions()
   const queryClient = useQueryClient()
+  const shouldReduceMotion = useReducedMotion()
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([])
@@ -136,7 +137,7 @@ export function AIPanel() {
           onClick={handleNewChat}
           className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
           whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.97 }}
           title="New chat"
         >
           <Plus className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
@@ -191,8 +192,8 @@ export function AIPanel() {
                   <motion.div
                     key={i}
                     className="w-2 h-2 rounded-full bg-muted-foreground/40"
-                    animate={{ y: [0, -4, 0] }}
-                    transition={{
+                    animate={shouldReduceMotion ? {} : { y: [0, -4, 0] }}
+                    transition={shouldReduceMotion ? {} : {
                       duration: 0.6,
                       repeat: Infinity,
                       delay: i * 0.15,
@@ -208,7 +209,7 @@ export function AIPanel() {
       </div>
 
       <div className="px-5 py-4 border-t border-border/50">
-        <div className="flex items-center gap-2 bg-white border border-border/50 rounded-2xl px-4 py-2.5 transition-all">
+        <div className="flex items-center gap-2 bg-white border border-border/50 rounded-2xl px-4 py-2.5 transition-colors">
           <input
             type="text"
             value={input}
@@ -223,7 +224,7 @@ export function AIPanel() {
             disabled={sending || !input.trim()}
             className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center shrink-0 disabled:opacity-40"
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.97 }}
           >
             <Send className="w-3.5 h-3.5 text-white" strokeWidth={1.5} />
           </motion.button>

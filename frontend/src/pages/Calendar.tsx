@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { useCalendarEvents } from '@/hooks/use-calendar'
 import { EventDetail } from '@/components/EventDetail'
@@ -16,6 +16,7 @@ function formatDate(iso: string) {
 }
 
 export function Calendar() {
+  const shouldReduceMotion = useReducedMotion()
   const { data: events, isLoading } = useCalendarEvents()
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
@@ -35,11 +36,16 @@ export function Calendar() {
           ))}
         </div>
       ) : events?.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4">
+        <motion.div
+          className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        >
           <CalendarIcon className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
           <p className="text-sm font-medium text-foreground">No events yet</p>
           <p className="text-[13px] text-muted-foreground">Add events to see your calendar here.</p>
-        </div>
+        </motion.div>
       ) : (
         <motion.div
           className="space-y-3"
@@ -50,34 +56,39 @@ export function Calendar() {
             show: { transition: { staggerChildren: 0.06 } },
           }}
         >
-          {events?.map((event) => (
-            <motion.div
-              key={event.id}
-              className="bg-white rounded-2xl border border-border/30 shadow-sm p-5 hover:shadow-md transition-all cursor-pointer"
-              variants={{
-                hidden: { opacity: 0, y: 8 },
-                show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
-              }}
-              whileHover={{ y: -1 }}
-              onClick={() => {
-                setSelectedEvent(event)
-                setDetailOpen(true)
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: event.color }} />
-                <div className="flex-1">
-                  <h3 className="text-[15px] font-semibold text-foreground">{event.title}</h3>
-                  <p className="text-[12px] text-muted-foreground mt-0.5">
-                    {formatDate(event.start_time)} · {formatTime(event.start_time)} – {formatTime(event.end_time)}
-                  </p>
+          <AnimatePresence mode="popLayout">
+            {events?.map((event) => (
+              <motion.div
+                key={event.id}
+                layout
+                className="bg-white rounded-2xl border border-border/30 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+                variants={{
+                  hidden: { opacity: 0, y: 8 },
+                  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },
+                }}
+                exit={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                whileHover={shouldReduceMotion ? {} : { y: -1 }}
+                whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+                onClick={() => {
+                  setSelectedEvent(event)
+                  setDetailOpen(true)
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: event.color }} />
+                  <div className="flex-1">
+                    <h3 className="text-[15px] font-semibold text-foreground">{event.title}</h3>
+                    <p className="text-[12px] text-muted-foreground mt-0.5">
+                      {formatDate(event.start_time)} · {formatTime(event.start_time)} – {formatTime(event.end_time)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {event.description && (
-                <p className="text-[13px] text-muted-foreground mt-2 ml-6">{event.description}</p>
-              )}
-            </motion.div>
-          ))}
+                {event.description && (
+                  <p className="text-[13px] text-muted-foreground mt-2 ml-6">{event.description}</p>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </motion.div>
       )}
 

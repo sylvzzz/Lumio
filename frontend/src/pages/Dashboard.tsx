@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { CalendarCard } from '@/components/dashboard/CalendarCard'
 import { NotesCard } from '@/components/dashboard/NotesCard'
 import { DocumentsCard } from '@/components/dashboard/DocumentsCard'
@@ -39,15 +39,17 @@ const item = {
 }
 
 export function Dashboard() {
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
+      variants={shouldReduceMotion ? {} : container}
+      initial={shouldReduceMotion ? undefined : "hidden"}
+      animate={shouldReduceMotion ? undefined : "show"}
       className="grid grid-cols-2 xl:grid-cols-3 gap-5 auto-rows-min"
     >
       {cards.map((Card, i) => (
-        <motion.div key={i} variants={item}>
+        <motion.div key={i} variants={shouldReduceMotion ? {} : item}>
           <Card />
         </motion.div>
       ))}

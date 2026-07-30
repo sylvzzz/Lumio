@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Sparkles,
   Home,
@@ -24,13 +24,15 @@ const navItems = [
 ]
 
 export function Sidebar() {
+  const shouldReduceMotion = useReducedMotion()
+
   return (
     <aside className="w-[260px] h-full flex flex-col border-r border-border/50 bg-white/70 backdrop-blur-2xl shrink-0">
       <div className="px-5 pt-7 pb-6">
         <motion.div
           className="flex items-center gap-2.5"
-          initial={{ opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={shouldReduceMotion ? {} : { opacity: 0, x: -12 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1, x: 0 }}
           transition={{ duration: 0.4, ease: [0.42, 0, 0.58, 1] }}
         >
           <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shadow-sm">
@@ -47,15 +49,15 @@ export function Sidebar() {
         {navItems.map((item, i) => (
           <motion.div
             key={item.to}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={shouldReduceMotion ? {} : { opacity: 0, x: -12 }}
+            animate={shouldReduceMotion ? {} : { opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.05 * i, ease: [0.42, 0, 0.58, 1] }}
           >
             <NavLink
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `relative flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 ${
+                `relative flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-colors duration-150 ${
                   isActive
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-black/[0.03]'
@@ -66,13 +68,19 @@ export function Sidebar() {
                 <>
                   {isActive && (
                     <motion.div
-                      layoutId="sidebar-active"
+                      layoutId={shouldReduceMotion ? undefined : "sidebar-active"}
                       className="absolute inset-0 bg-secondary rounded-xl"
                       transition={{ type: 'spring', stiffness: 350, damping: 30 }}
                     />
                   )}
-                  <item.icon className="w-4 h-4 shrink-0 relative z-10" strokeWidth={1.5} />
-                  <span className="relative z-10">{item.label}</span>
+                  <motion.div
+                    className="flex items-center gap-3 relative z-10 w-full"
+                    whileTap={shouldReduceMotion ? {} : { scale: 0.97 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                    <span>{item.label}</span>
+                  </motion.div>
                 </>
               )}
             </NavLink>
@@ -83,8 +91,8 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-border/50">
         <motion.div
           className="flex items-center gap-3 px-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={shouldReduceMotion ? {} : { opacity: 0 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.4 }}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center ring-1 ring-border">

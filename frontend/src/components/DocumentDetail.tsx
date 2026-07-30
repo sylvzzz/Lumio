@@ -1,4 +1,4 @@
-import { FileText, FileSpreadsheet, Download, FileIcon, Maximize2 } from 'lucide-react'
+import { FileText, FileSpreadsheet, Download, FileIcon } from 'lucide-react'
 import type { Document } from '@/lib/api'
 import {
   Dialog,

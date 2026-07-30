@@ -69,7 +69,7 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Write your note..."
-          className="w-full h-48 bg-secondary/50 rounded-xl border border-border/50 p-4 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 resize-none transition-all"
+          className="w-full h-48 bg-secondary/50 rounded-xl border border-border/50 p-4 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 resize-none transition-shadow"
           autoFocus
         />
 
@@ -93,7 +93,7 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
             <button
               onClick={handleSave}
               disabled={saving || !content.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-all"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
             >
               <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
               {saving ? 'Saving...' : 'Save'}

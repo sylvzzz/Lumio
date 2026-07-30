@@ -24,7 +24,7 @@ export function CalendarCard() {
 
   return (
     <motion.div
-      className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-all duration-200"
+      className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
       whileHover={{ y: -1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
     >
