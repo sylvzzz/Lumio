@@ -5,7 +5,7 @@ Your personal AI workspace — notes, documents, emails, and calendar, all in on
 <br>
 <img src="dark.png">
 <br>
-<img src="dark.png">
+<img src="light.png">
 <br>
 
 ## Documentation
