@@ -43,6 +43,14 @@ export interface CalendarEventInput {
   color: string
 }
 
+export interface Task {
+  id: string
+  title: string
+  done: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Email {
   id: string
   account: string
@@ -118,6 +126,12 @@ export const api = {
   },
   emails: {
     list: () => fetchJSON<Email[]>('/emails/'),
+  },
+  tasks: {
+    list: () => fetchJSON<Task[]>('/tasks/'),
+    create: (data: { title: string }) => mutate<Task>('/tasks/', 'POST', data),
+    update: (id: string, data: { title?: string; done?: boolean }) => mutate<Task>(`/tasks/${id}/`, 'PATCH', data),
+    delete: (id: string) => mutate<void>(`/tasks/${id}/`, 'DELETE'),
   },
   documents: {
     list: () => fetchJSON<Document[]>('/documents/'),

@@ -1,14 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
-  Sparkles,
+  Bot,
   Home,
   Calendar,
   StickyNote,
   FileText,
   Inbox,
   CheckSquare,
-  Bot,
   Settings,
 } from 'lucide-react'
 
@@ -36,7 +35,7 @@ export function Sidebar() {
           transition={{ duration: 0.4, ease: [0.42, 0, 0.58, 1] }}
         >
           <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shadow-sm">
-            <Sparkles className="w-4.5 h-4.5 text-white" strokeWidth={1.5} />
+            <Bot className="w-4.5 h-4.5 text-white" strokeWidth={1.5} />
           </div>
           <div>
             <span className="text-sm font-semibold tracking-tight">Lumio</span>

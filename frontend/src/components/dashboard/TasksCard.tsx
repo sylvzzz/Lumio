@@ -1,35 +1,65 @@
-import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckSquare } from 'lucide-react'
-
-const initialTasks = [
-  { title: 'Review design system PR', done: false },
-  { title: 'Prepare Q4 presentation', done: true },
-  { title: 'Reply to Sarah about meeting', done: false },
-  { title: 'Update project roadmap', done: false },
-]
+import { useNavigate } from 'react-router-dom'
+import { CheckSquare, ChevronRight } from 'lucide-react'
+import { useTasks } from '@/hooks/use-tasks'
+import { api, type Task } from '@/lib/api'
+import { useQueryClient } from '@tanstack/react-query'
 
 export function TasksCard() {
-  const [tasks, setTasks] = useState(initialTasks)
+  const { data: tasks, isLoading } = useTasks()
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
-  const toggle = (i: number) => {
-    setTasks((prev) =>
-      prev.map((t, idx) => (idx === i ? { ...t, done: !t.done } : t))
+  const toggleTask = async (task: Task) => {
+    queryClient.setQueryData<Task[]>(['tasks'], (old) =>
+      old?.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)) ?? old,
+    )
+    try {
+      await api.tasks.update(task.id, { done: !task.done })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (e) {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      console.error(e)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-card/50 rounded-2xl border border-border/20 p-6 animate-pulse">
+        <div className="h-4 w-28 rounded bg-muted-foreground/20" />
+        <div className="mt-5 space-y-3">
+          <div className="h-3 w-full rounded bg-muted-foreground/10" />
+          <div className="h-3 w-3/4 rounded bg-muted-foreground/10" />
+        </div>
+      </div>
     )
   }
 
+  const visible = (tasks ?? [])
+    .slice()
+    .sort((a, b) => Number(a.done) - Number(b.done))
+    .slice(0, 4)
+  const remaining = (tasks ?? []).filter((t) => !t.done).length
+
   return (
-    <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+    <motion.div
+      className="bg-card rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
+      whileHover={{ y: -1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+    >
       <div className="flex items-center gap-2.5 mb-5">
         <CheckSquare className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
         <h2 className="text-[15px] font-semibold tracking-tight">Today's Tasks</h2>
       </div>
       <div className="space-y-3">
-        {tasks.map((task, i) => (
+        {visible.length === 0 && (
+          <p className="text-[13px] text-muted-foreground">No tasks yet</p>
+        )}
+        {visible.map((task) => (
           <motion.div
-            key={task.title}
+            key={task.id}
             className="flex items-center gap-3 group cursor-pointer"
-            onClick={() => toggle(i)}
+            onClick={() => toggleTask(task)}
             whileTap={{ scale: 0.97 }}
             layout
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
@@ -68,7 +98,7 @@ export function TasksCard() {
               </motion.div>
             </div>
             <motion.span
-              className={`text-[13px] ${
+              className={`text-[13px] truncate ${
                 task.done ? 'text-muted-foreground' : 'text-foreground font-medium'
               }`}
               animate={{ textDecoration: task.done ? 'line-through' : 'none' }}
@@ -79,6 +109,17 @@ export function TasksCard() {
           </motion.div>
         ))}
       </div>
-    </div>
+      {remaining > 0 && (
+        <p className="text-[11px] text-muted-foreground mt-4">{remaining} remaining</p>
+      )}
+      <motion.button
+        onClick={() => navigate('/tasks')}
+        className="mt-4 flex items-center gap-1 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors"
+        whileHover={{ x: 2 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      >
+        View Tasks <ChevronRight className="w-3 h-3" strokeWidth={1.5} />
+      </motion.button>
+    </motion.div>
   )
 }

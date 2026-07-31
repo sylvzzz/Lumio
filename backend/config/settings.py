@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'documents',
     'calendarevents',
     'emails',
+    'tasks',
     'chat',
 ]
 

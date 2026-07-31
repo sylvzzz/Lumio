@@ -1,107 +1,38 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRef, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Sparkles, Send, Plus } from 'lucide-react'
-import { api } from '@/lib/api'
-import { useChatSessions } from '@/hooks/use-chat'
-import { useQueryClient } from '@tanstack/react-query'
-
-interface LocalMessage {
-  id: string
-  session: string
-  role: 'user' | 'assistant'
-  content: string
-  sources: unknown[]
-  created_at: string
-  optimistic?: boolean
-}
+import { Bot, Send, Plus, X } from 'lucide-react'
+import { useChatComposer } from '@/hooks/use-chat-composer'
+import { useAIPanelStore } from '@/store/ai-panel'
+import { Markdown } from '@/components/Markdown'
 
 export function AIPanel() {
-  const { data: sessions, isLoading } = useChatSessions()
-  const queryClient = useQueryClient()
   const shouldReduceMotion = useReducedMotion()
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const [localMessages, setLocalMessages] = useState<LocalMessage[]>([])
+  const width = useAIPanelStore((s) => s.width)
+  const setWidth = useAIPanelStore((s) => s.setWidth)
+  const closePanel = useAIPanelStore((s) => s.closePanel)
+  const { input, setInput, sending, messages, isLoading, currentSession, handleSend, handleNewChat } = useChatComposer()
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const currentSession = sessions?.[0]
-  const serverMessages: LocalMessage[] = (currentSession?.messages ?? []).map(m => ({
-    ...m,
-    session: m.session,
-  }))
-
-  const messages = localMessages.length > 0 ? localMessages : serverMessages
-
-  useEffect(() => {
-    if (!sending && localMessages.length > 0) {
-      setLocalMessages([])
-    }
-  }, [serverMessages.length])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, sending])
 
-  const ensureSession = async () => {
-    if (currentSession) return currentSession
-    const session = await api.chat.createSession()
-    queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
-    return session
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = width
+    const onMove = (ev: PointerEvent) => {
+      setWidth(startWidth + (startX - ev.clientX))
+    }
+    const onUp = () => {
+      document.body.style.cursor = ''
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    document.body.style.cursor = 'col-resize'
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }
-
-  const handleSend = useCallback(async () => {
-    const text = input.trim()
-    if (!text || sending) return
-    setInput('')
-    setSending(true)
-
-    const tempId = `temp-${Date.now()}`
-    const optimisticMsg: LocalMessage = {
-      id: tempId,
-      session: currentSession?.id || '',
-      role: 'user',
-      content: text,
-      sources: [],
-      created_at: new Date().toISOString(),
-      optimistic: true,
-    }
-
-    setLocalMessages(prev => [...(prev.length > 0 ? prev : serverMessages), optimisticMsg])
-
-    try {
-      const session = await ensureSession()
-      const res = await api.chat.sendMessage(session.id, text)
-
-      setLocalMessages(prev => {
-        const base = prev.filter(m => m.id !== tempId)
-        const userMsg: LocalMessage = {
-          id: res.id,
-          session: res.session,
-          role: 'user',
-          content: res.content,
-          sources: res.sources,
-          created_at: res.created_at,
-        }
-        const msgs = [...base, userMsg]
-        if (res.ai_response) {
-          msgs.push({
-            id: res.ai_response.id,
-            session: res.ai_response.session,
-            role: 'assistant',
-            content: res.ai_response.content,
-            sources: res.ai_response.sources,
-            created_at: res.ai_response.created_at,
-          })
-        }
-        return msgs
-      })
-
-      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
-    } catch (e) {
-      console.error('Failed to send message', e)
-    }
-    setSending(false)
-  }, [input, sending, currentSession, serverMessages, queryClient])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -110,14 +41,17 @@ export function AIPanel() {
     }
   }
 
-  const handleNewChat = async () => {
-    await api.chat.createSession()
-    setLocalMessages([])
-    queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
-  }
-
   return (
-    <aside className="w-[380px] h-full flex flex-col border-l border-border/50 bg-background/90 backdrop-blur-2xl shrink-0 transition-colors duration-300">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div
+        onPointerDown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        className="absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 group/rs"
+      >
+        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full bg-transparent transition-colors group-hover/rs:bg-accent/30 group-active/rs:bg-accent/60" />
+      </div>
+
       <motion.div
         className="px-6 pt-7 pb-4 border-b border-border/50 flex items-center justify-between"
         initial={{ opacity: 0 }}
@@ -126,29 +60,40 @@ export function AIPanel() {
       >
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" strokeWidth={1.5} />
+            <Bot className="w-4 h-4 text-white" strokeWidth={1.5} />
           </div>
           <div>
             <span className="text-sm font-semibold tracking-tight">Lumio</span>
             <p className="text-[11px] text-muted-foreground leading-none mt-0.5">Your personal AI assistant</p>
           </div>
         </div>
-        <motion.button
-          onClick={handleNewChat}
-          className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-          title="New chat"
-        >
-          <Plus className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
-        </motion.button>
+        <div className="flex items-center gap-1.5">
+          <motion.button
+            onClick={handleNewChat}
+            className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            title="New chat"
+          >
+            <Plus className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
+          </motion.button>
+          <motion.button
+            onClick={closePanel}
+            className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            title="Close panel"
+          >
+            <X className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </motion.button>
+        </div>
       </motion.div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
         {!currentSession && !isLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
-            <Sparkles className="w-8 h-8 text-accent/30 mb-3" strokeWidth={1} />
-            <p className="text-[13px] text-muted-foreground">Ask me anything about your notes, documents, or emails.</p>
+            <Bot className="w-8 h-8 text-accent/30 mb-3" strokeWidth={1} />
+            <p className="text-[13px] text-muted-foreground">Ask me anything about your notes, documents, emails, or calendar.</p>
           </div>
         )}
 
@@ -173,7 +118,7 @@ export function AIPanel() {
                     : 'bg-card border border-border/50 text-foreground rounded-bl-md shadow-sm'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <Markdown>{msg.content}</Markdown>
               </div>
             </motion.div>
           ))}
@@ -220,7 +165,7 @@ export function AIPanel() {
             className="flex-1 text-[13px] bg-transparent placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
           />
           <motion.button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={sending || !input.trim()}
             className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center shrink-0 disabled:opacity-40"
             whileHover={{ scale: 1.05 }}
@@ -230,6 +175,6 @@ export function AIPanel() {
           </motion.button>
         </div>
       </div>
-    </aside>
+    </div>
   )
 }

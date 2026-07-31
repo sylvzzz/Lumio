@@ -4,6 +4,7 @@ from django.utils import timezone as tz
 from accounts.models import User
 from notes.models import Note
 from calendarevents.models import CalendarEvent
+from tasks.models import Task
 from documents.models import Document, DocumentFolder
 from emails.models import EmailAccount, Email
 from chat.models import ChatSession, ChatMessage
@@ -56,6 +57,17 @@ class Command(BaseCommand):
                 defaults={k: v for k, v in data.items() if k != 'title'},
             )
         self.stdout.write(self.style.SUCCESS('Seeded 5 calendar events'))
+
+        # Tasks
+        tasks_data = [
+            {'title': 'Review design system PR', 'done': False},
+            {'title': 'Prepare Q4 presentation', 'done': True},
+            {'title': 'Reply to Sarah about meeting', 'done': False},
+            {'title': 'Update project roadmap', 'done': False},
+        ]
+        for data in tasks_data:
+            Task.objects.get_or_create(user=user, title=data['title'], defaults={'done': data['done']})
+        self.stdout.write(self.style.SUCCESS('Seeded 4 tasks'))
 
         # Document folders
         folder, _ = DocumentFolder.objects.get_or_create(user=user, name='Work Documents')

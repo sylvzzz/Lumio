@@ -6,6 +6,7 @@ from notes.views import NoteViewSet
 from documents.views import DocumentViewSet, DocumentFolderViewSet
 from calendarevents.views import CalendarEventViewSet
 from emails.views import EmailAccountViewSet, EmailViewSet
+from tasks.views import TaskViewSet
 from chat.views import ChatSessionViewSet, ChatMessageViewSet
 
 router = DefaultRouter()
@@ -16,6 +17,7 @@ router.register(r'documents', DocumentViewSet, basename='documents')
 router.register(r'calendar-events', CalendarEventViewSet, basename='calendar-events')
 router.register(r'email-accounts', EmailAccountViewSet, basename='email-accounts')
 router.register(r'emails', EmailViewSet, basename='emails')
+router.register(r'tasks', TaskViewSet, basename='tasks')
 router.register(r'chat-sessions', ChatSessionViewSet, basename='chat-sessions')
 router.register(r'chat-messages', ChatMessageViewSet, basename='chat-messages')
 
