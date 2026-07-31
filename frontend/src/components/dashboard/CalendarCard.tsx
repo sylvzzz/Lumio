@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { Calendar, ChevronRight } from 'lucide-react'
 import { useCalendarEvents } from '@/hooks/use-calendar'
 
@@ -9,6 +10,7 @@ function formatTime(iso: string) {
 
 export function CalendarCard() {
   const { data: events, isLoading } = useCalendarEvents()
+  const navigate = useNavigate()
 
   if (isLoading) {
     return (
@@ -53,6 +55,7 @@ export function CalendarCard() {
         ))}
       </div>
       <motion.button
+        onClick={() => navigate('/calendar')}
         className="mt-5 flex items-center gap-1 text-[12px] font-medium text-accent hover:text-accent/80 transition-colors"
         whileHover={{ x: 2 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
