@@ -2,6 +2,12 @@
 
 Your personal AI workspace — notes, documents, emails, and calendar, all in one place with an intelligent AI assistant.
 
+<br>
+<img src="dark.png">
+<br>
+<img src="dark.png">
+<br>
+
 ## Documentation
 
 - [Product Overview](PRODUCT.md) — Vision, design, tech stack
