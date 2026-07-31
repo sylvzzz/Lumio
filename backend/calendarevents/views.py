@@ -10,4 +10,8 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
         return CalendarEvent.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
+        timezone = self.request.data.get('timezone')
+        if timezone and self.request.user.timezone != timezone:
+            self.request.user.timezone = timezone
+            self.request.user.save(update_fields=['timezone'])
         serializer.save(user=self.request.user)

@@ -8,6 +8,7 @@ class User(AbstractUser):
     google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     outlook_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     avatar_url = models.URLField(blank=True, null=True)
+    timezone = models.CharField(max_length=64, blank=True, default='UTC')
 
     def __str__(self):
         return self.email or self.username

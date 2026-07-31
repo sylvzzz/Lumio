@@ -4,7 +4,7 @@ dev: ## Start all services
 	docker compose up --build
 
 dev-backend: ## Run backend locally
-	cd backend && python manage.py runserver
+	cd backend && python3 manage.py runserver
 
 dev-frontend: ## Run frontend locally
 	cd frontend && npm run dev

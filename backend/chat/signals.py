@@ -21,6 +21,7 @@ def connect_signals():
     from documents.models import Document
     from emails.models import Email
     from calendarevents.models import CalendarEvent
+    from tasks.models import Task
 
     @receiver(post_save, sender=Note, weak=False)
     def auto_embed_note(sender, instance, created, **kwargs):
@@ -57,11 +58,22 @@ def connect_signals():
         if embedding:
             CalendarEvent.objects.filter(pk=instance.pk).update(embedding=embedding)
 
+    @receiver(post_save, sender=Task, weak=False)
+    def auto_embed_task(sender, instance, created, **kwargs):
+        if instance.embedding is not None:
+            return
+        text = f"{instance.title} ({'done' if instance.done else 'pending'})"
+        embedding = get_embedding_for_content(text)
+        if embedding:
+            Task.objects.filter(pk=instance.pk).update(embedding=embedding)
+
     from notes.models import Note
     from documents.models import Document
     from emails.models import Email
     from calendarevents.models import CalendarEvent
+    from tasks.models import Task
     post_save.connect(auto_embed_note, sender=Note, weak=False)
     post_save.connect(auto_embed_document, sender=Document, weak=False)
     post_save.connect(auto_embed_email, sender=Email, weak=False)
     post_save.connect(auto_embed_calendar_event, sender=CalendarEvent, weak=False)
+    post_save.connect(auto_embed_task, sender=Task, weak=False)

@@ -73,6 +73,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
         end_time: new Date(`${endDate}T${allDay ? '23:59:59' : `${endTime}:00`}`).toISOString(),
         all_day: allDay,
         color,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
       onClose()

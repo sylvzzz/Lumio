@@ -41,6 +41,7 @@ export interface CalendarEventInput {
   end_time: string
   all_day: boolean
   color: string
+  timezone?: string
 }
 
 export interface Task {
@@ -152,6 +153,6 @@ export const api = {
   chat: {
     sessions: () => fetchJSON<ChatSession[]>('/chat-sessions/'),
     createSession: (title?: string) => mutate<ChatSession>('/chat-sessions/', 'POST', { title: title || 'New Chat' }),
-    sendMessage: (session: string, content: string) => mutate<ChatSendResponse>('/chat-messages/', 'POST', { session, content, role: 'user' }),
+    sendMessage: (session: string, content: string, timezone?: string) => mutate<ChatSendResponse>('/chat-messages/', 'POST', { session, content, role: 'user', timezone }),
   },
 }

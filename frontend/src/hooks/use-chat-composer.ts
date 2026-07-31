@@ -59,7 +59,7 @@ export function useChatComposer() {
 
     try {
       const session = await ensureSession()
-      const res = await api.chat.sendMessage(session.id, text)
+      const res = await api.chat.sendMessage(session.id, text, Intl.DateTimeFormat().resolvedOptions().timeZone)
 
       setLocalMessages((prev) => {
         const base = prev.filter((m) => m.id !== tempId)
