@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Search, Bell, Settings, FileText, StickyNote, Mail, Calendar, ArrowRight } from 'lucide-react'
+import { Search, Bell, Settings, FileText, StickyNote, Mail, Calendar, ArrowRight, Moon, Sun } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 
 interface SearchResult {
   id: string
@@ -38,10 +44,21 @@ export function TopHeader() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [dark, setDark] = useState(() => {
+    if (typeof document === 'undefined') return false
+    const stored = localStorage.getItem('theme')
+    if (stored) return stored === 'dark'
+    return document.documentElement.classList.contains('dark')
+  })
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -123,7 +140,7 @@ export function TopHeader() {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
               placeholder="Search everything..."
-              className="w-full h-9 bg-white rounded-xl border border-border/50 pl-9 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+              className="w-full h-9 bg-card rounded-xl border border-border/50 pl-9 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
             />
             {loading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -139,7 +156,7 @@ export function TopHeader() {
                 animate={shouldReduceMotion ? {} : { opacity: 1, y: 0, scale: 1 }}
                 exit={shouldReduceMotion ? {} : { opacity: 0, y: 4, scale: 0.97 }}
                 transition={{ duration: 0.15, ease: [0.42, 0, 0.58, 1] }}
-                className="absolute top-full right-0 mt-2 w-[480px] bg-white rounded-2xl border border-border/50 shadow-apple-lg overflow-hidden z-50"
+                className="absolute top-full right-0 mt-2 w-[480px] bg-popover rounded-2xl border border-border/50 shadow-apple-lg overflow-hidden z-50"
                 style={{ transformOrigin: 'top right' }}
               >
                 {results.length === 0 ? (
@@ -192,7 +209,7 @@ export function TopHeader() {
         </div>
 
         <motion.button
-          className="w-9 h-9 rounded-xl bg-white border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors relative"
+          className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors relative"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
         >
@@ -201,13 +218,23 @@ export function TopHeader() {
             <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-50" />
           </span>
         </motion.button>
-        <motion.button
-          className="w-9 h-9 rounded-xl bg-white border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-        </motion.button>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={
+            <motion.button
+              className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+            </motion.button>
+          } />
+          <DropdownMenuContent align="end" sideOffset={8}>
+            <DropdownMenuItem onClick={() => setDark((d) => !d)}>
+              {dark ? <Sun className="w-4 h-4" strokeWidth={1.5} /> : <Moon className="w-4 h-4" strokeWidth={1.5} />}
+              {dark ? 'Light mode' : 'Dark mode'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <motion.div
           className="w-9 h-9 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center ring-1 ring-border cursor-pointer"
           whileHover={{ scale: 1.05 }}

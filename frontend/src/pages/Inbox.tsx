@@ -32,7 +32,7 @@ export function Inbox() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white/50 rounded-2xl border border-border/20 p-4 animate-pulse">
+            <div key={i} className="bg-card/50 rounded-2xl border border-border/20 p-4 animate-pulse">
               <div className="h-4 w-40 rounded bg-muted-foreground/20" />
               <div className="mt-1 h-3 w-64 rounded bg-muted-foreground/10" />
             </div>
@@ -40,7 +40,7 @@ export function Inbox() {
         </div>
       ) : emails?.length === 0 ? (
         <motion.div
-          className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          className="bg-card rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -96,7 +96,7 @@ export function Inbox() {
                 <div className="absolute inset-0 bg-red-500/10 flex items-center justify-end pr-4 rounded-2xl">
                   <Archive className="w-5 h-5 text-red-500" strokeWidth={1.5} />
                 </div>
-                <div className="bg-white rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer relative">
+                <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer relative">
                   <div className="flex items-center gap-3">
                     {!email.is_read && <div className="w-2 h-2 rounded-full bg-accent shrink-0" />}
                     {email.is_read && <div className="w-2 shrink-0" />}

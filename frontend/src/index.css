@@ -39,6 +39,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
   --color-background: var(--background);
 
   --radius-sm: 0.375rem;
@@ -57,6 +58,7 @@
 }
 
 :root {
+  --canvas: #f5f5f7;
   --background: #ffffff;
   --foreground: #1d1d1f;
   --card: #ffffff;
@@ -87,25 +89,26 @@
 }
 
 .dark {
-  --background: #1d1d1f;
+  --canvas: #151517;
+  --background: #151517;
   --foreground: #f5f5f7;
-  --card: #2d2d2f;
+  --card: #1e1e21;
   --card-foreground: #f5f5f7;
-  --popover: #2d2d2f;
+  --popover: #1e1e21;
   --popover-foreground: #f5f5f7;
   --primary: #f5f5f7;
-  --primary-foreground: #1d1d1f;
-  --secondary: #2d2d2f;
+  --primary-foreground: #151517;
+  --secondary: #1e1e21;
   --secondary-foreground: #f5f5f7;
-  --muted: #2d2d2f;
+  --muted: #1e1e21;
   --muted-foreground: #86868b;
   --accent: #2997ff;
-  --accent-foreground: #1d1d1f;
+  --accent-foreground: #151517;
   --destructive: #ff453a;
-  --border: #424245;
-  --input: #424245;
+  --border: #333338;
+  --input: #333338;
   --ring: #2997ff;
-  --sidebar: rgba(29,29,31,0.72);
+  --sidebar: rgba(21,21,23,0.72);
   --sidebar-foreground: #f5f5f7;
   --sidebar-primary: #2997ff;
   --sidebar-primary-foreground: #ffffff;
@@ -120,7 +123,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-[#f5f5f7] text-foreground font-sans antialiased;
+    @apply bg-canvas text-foreground font-sans antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -27,7 +27,7 @@ export function Sidebar() {
   const shouldReduceMotion = useReducedMotion()
 
   return (
-    <aside className="w-[260px] h-full flex flex-col border-r border-border/50 bg-white/70 backdrop-blur-2xl shrink-0">
+    <aside className="w-[260px] h-full flex flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">
       <div className="px-5 pt-7 pb-6">
         <motion.div
           className="flex items-center gap-2.5"

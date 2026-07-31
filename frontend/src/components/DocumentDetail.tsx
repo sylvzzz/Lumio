@@ -86,7 +86,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
           )}
 
           {isPdf ? (
-            <div className="w-full h-[70vh] bg-[#f5f5f7]">
+            <div className="w-full h-[70vh] bg-canvas">
               <iframe
                 src={getViewUrl(doc)}
                 className="w-full h-full border-0"

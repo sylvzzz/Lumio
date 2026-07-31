@@ -117,7 +117,7 @@ export function AIPanel() {
   }
 
   return (
-    <aside className="w-[380px] h-full flex flex-col border-l border-border/50 bg-white/90 backdrop-blur-2xl shrink-0">
+    <aside className="w-[380px] h-full flex flex-col border-l border-border/50 bg-background/90 backdrop-blur-2xl shrink-0 transition-colors duration-300">
       <motion.div
         className="px-6 pt-7 pb-4 border-b border-border/50 flex items-center justify-between"
         initial={{ opacity: 0 }}
@@ -170,7 +170,7 @@ export function AIPanel() {
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-secondary text-foreground rounded-br-md'
-                    : 'bg-white border border-border/50 text-foreground rounded-bl-md shadow-sm'
+                    : 'bg-card border border-border/50 text-foreground rounded-bl-md shadow-sm'
                 }`}
               >
                 <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -186,7 +186,7 @@ export function AIPanel() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
           >
-            <div className="bg-white border border-border/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+            <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
               <div className="flex gap-1">
                 {[0, 1, 2].map((i) => (
                   <motion.div
@@ -209,7 +209,7 @@ export function AIPanel() {
       </div>
 
       <div className="px-5 py-4 border-t border-border/50">
-        <div className="flex items-center gap-2 bg-white border border-border/50 rounded-2xl px-4 py-2.5 transition-colors">
+        <div className="flex items-center gap-2 bg-card border border-border/50 rounded-2xl px-4 py-2.5 transition-colors">
           <input
             type="text"
             value={input}

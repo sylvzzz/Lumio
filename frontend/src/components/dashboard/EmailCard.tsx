@@ -18,7 +18,7 @@ export function EmailCard() {
 
   if (isLoading) {
     return (
-      <div className="bg-white/50 rounded-2xl border border-border/20 p-6 animate-pulse">
+      <div className="bg-card/50 rounded-2xl border border-border/20 p-6 animate-pulse">
         <div className="h-4 w-20 rounded bg-muted-foreground/20" />
         <div className="mt-5 space-y-3">
           <div className="h-8 w-full rounded bg-muted-foreground/10" />
@@ -32,7 +32,7 @@ export function EmailCard() {
 
   return (
       <motion.div
-        className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
+        className="bg-card rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
         whileHover={shouldReduceMotion ? {} : { y: -1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       >

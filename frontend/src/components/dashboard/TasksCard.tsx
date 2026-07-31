@@ -19,7 +19,7 @@ export function TasksCard() {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+    <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
       <div className="flex items-center gap-2.5 mb-5">
         <CheckSquare className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
         <h2 className="text-[15px] font-semibold tracking-tight">Today's Tasks</h2>

@@ -160,14 +160,14 @@ export function Documents() {
       {isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white/50 rounded-2xl border border-border/20 p-4 animate-pulse">
+            <div key={i} className="bg-card/50 rounded-2xl border border-border/20 p-4 animate-pulse">
               <div className="h-4 w-48 rounded bg-muted-foreground/20" />
             </div>
           ))}
         </div>
       ) : docs?.length === 0 ? (
         <motion.div
-          className="bg-white rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          className="bg-card rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -195,7 +195,7 @@ export function Documents() {
                 <motion.div
                   key={doc.id}
                   layout
-                  className="bg-white rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-card rounded-2xl border border-border/30 shadow-sm p-4 hover:shadow-md transition-shadow cursor-pointer"
                   variants={{
                     hidden: { opacity: 0, y: 8 },
                     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 200, damping: 20 } },
