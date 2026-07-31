@@ -12,6 +12,21 @@ export function CalendarCard() {
   const { data: events, isLoading } = useCalendarEvents()
   const navigate = useNavigate()
 
+  const todayEvents = (events ?? [])
+    .filter((e) => {
+      const start = new Date(e.start_time)
+      const end = new Date(e.end_time)
+      const today = new Date()
+      return (
+        start.getFullYear() === today.getFullYear() &&
+        start.getMonth() === today.getMonth() &&
+        start.getDate() === today.getDate() &&
+        end.getTime() > Date.now()
+      )
+    })
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .slice(0, 3)
+
   if (isLoading) {
     return (
       <div className="bg-card/50 rounded-2xl border border-border/20 p-6 animate-pulse">
@@ -37,10 +52,10 @@ export function CalendarCard() {
         </div>
       </div>
       <div className="space-y-3">
-        {events?.length === 0 && (
+        {todayEvents.length === 0 && (
           <p className="text-[13px] text-muted-foreground">No events today</p>
         )}
-        {events?.slice(0, 3).map((event, i) => (
+        {todayEvents.map((event, i) => (
           <motion.div
             key={event.id}
             className="flex items-center gap-3"

@@ -20,6 +20,7 @@ def connect_signals():
     from notes.models import Note
     from documents.models import Document
     from emails.models import Email
+    from calendarevents.models import CalendarEvent
 
     @receiver(post_save, sender=Note, weak=False)
     def auto_embed_note(sender, instance, created, **kwargs):
@@ -47,9 +48,20 @@ def connect_signals():
         if embedding:
             Email.objects.filter(pk=instance.pk).update(embedding=embedding)
 
+    @receiver(post_save, sender=CalendarEvent, weak=False)
+    def auto_embed_calendar_event(sender, instance, created, **kwargs):
+        if instance.embedding is not None:
+            return
+        text = f"{instance.title}\n\n{instance.description}"[:2000]
+        embedding = get_embedding_for_content(text)
+        if embedding:
+            CalendarEvent.objects.filter(pk=instance.pk).update(embedding=embedding)
+
     from notes.models import Note
     from documents.models import Document
     from emails.models import Email
+    from calendarevents.models import CalendarEvent
     post_save.connect(auto_embed_note, sender=Note, weak=False)
     post_save.connect(auto_embed_document, sender=Document, weak=False)
     post_save.connect(auto_embed_email, sender=Email, weak=False)
+    post_save.connect(auto_embed_calendar_event, sender=CalendarEvent, weak=False)

@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { useCalendarEvents } from '@/hooks/use-calendar'
 import { EventDetail } from '@/components/EventDetail'
+import { EventDialog } from '@/components/EventDialog'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent } from '@/lib/api'
 
@@ -61,6 +62,8 @@ export function Calendar() {
   const { data: events, isLoading } = useCalendarEvents()
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogDate, setDialogDate] = useState<Date | null>(null)
   const [viewDate, setViewDate] = useState(() => {
     const now = new Date()
     return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -127,12 +130,30 @@ export function Calendar() {
     setViewDate(new Date(now.getFullYear(), now.getMonth(), 1))
   }
 
+  const openCreateDialog = (date: Date | null) => {
+    setDialogDate(date)
+    setDialogOpen(true)
+  }
+
   const monthLabel = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-1">Calendar</h1>
-      <p className="text-muted-foreground text-sm mb-8">Your schedule at a glance.</p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Calendar</h1>
+          <p className="text-muted-foreground text-sm mt-1">Your schedule at a glance.</p>
+        </div>
+        <motion.button
+          onClick={() => openCreateDialog(null)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 transition-colors"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+        >
+          <Plus className="w-4 h-4" strokeWidth={1.5} />
+          New Event
+        </motion.button>
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -225,12 +246,14 @@ export function Calendar() {
                         <div
                           key={key}
                           className={cn(
-                            'h-[92px] lg:h-[108px] overflow-hidden border-b border-r border-border/30 p-1.5 transition-colors',
+                            'h-[92px] lg:h-[108px] overflow-hidden border-b border-r border-border/30 p-1.5 transition-colors cursor-pointer',
                             i % 7 === 6 && 'border-r-0',
                             i >= 35 && 'border-b-0',
                             !inMonth && 'bg-muted/20',
                             isToday && 'bg-accent/[0.04]',
+                            'hover:bg-muted/40',
                           )}
+                          onClick={() => openCreateDialog(day)}
                         >
                           <div className="flex items-center justify-center">
                             <span
@@ -250,7 +273,10 @@ export function Calendar() {
                             {dayEvents.map((event) => (
                               <button
                                 key={event.id}
-                                onClick={() => openEvent(event)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openEvent(event)
+                                }}
                                 className="block w-full truncate rounded-md px-1.5 py-[3px] text-left text-[10px] font-medium text-white hover:opacity-90 transition-opacity"
                                 style={{ backgroundColor: event.color }}
                               >
@@ -332,6 +358,15 @@ export function Calendar() {
           </div>
         </div>
       )}
+
+      <EventDialog
+        open={dialogOpen}
+        initialDate={dialogDate}
+        onClose={() => {
+          setDialogOpen(false)
+          setDialogDate(null)
+        }}
+      />
 
       <EventDetail
         event={selectedEvent}

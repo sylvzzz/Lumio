@@ -39,14 +39,23 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Seeded 3 notes'))
 
         # Calendar events
+        def on_day(days, hour, minute):
+            return (now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                    + timedelta(days=days))
+
         events_data = [
-            {'title': 'Project standup', 'start_time': now.replace(hour=10, minute=0), 'end_time': now.replace(hour=10, minute=30), 'color': '#0071e3'},
-            {'title': 'Design review', 'start_time': now.replace(hour=14, minute=0), 'end_time': now.replace(hour=15, minute=0), 'color': '#ff9f0a'},
-            {'title': 'Client call', 'start_time': now.replace(hour=16, minute=30), 'end_time': now.replace(hour=17, minute=0), 'color': '#30d158'},
+            {'title': 'Project standup', 'start_time': on_day(0, 10, 0), 'end_time': on_day(0, 10, 30), 'color': '#0071e3'},
+            {'title': 'Design review', 'start_time': on_day(0, 14, 0), 'end_time': on_day(0, 15, 0), 'color': '#ff9f0a'},
+            {'title': 'Client call', 'start_time': on_day(1, 16, 30), 'end_time': on_day(1, 17, 0), 'color': '#30d158'},
+            {'title': 'Team offsite', 'start_time': on_day(3, 11, 0), 'end_time': on_day(3, 13, 0), 'color': '#af52de'},
+            {'title': 'Product launch review', 'start_time': on_day(7, 15, 0), 'end_time': on_day(7, 16, 0), 'color': '#ff3b30'},
         ]
         for data in events_data:
-            CalendarEvent.objects.get_or_create(user=user, title=data['title'], defaults={k: v for k, v in data.items() if k != 'title'})
-        self.stdout.write(self.style.SUCCESS('Seeded 3 calendar events'))
+            CalendarEvent.objects.update_or_create(
+                user=user, title=data['title'],
+                defaults={k: v for k, v in data.items() if k != 'title'},
+            )
+        self.stdout.write(self.style.SUCCESS('Seeded 5 calendar events'))
 
         # Document folders
         folder, _ = DocumentFolder.objects.get_or_create(user=user, name='Work Documents')

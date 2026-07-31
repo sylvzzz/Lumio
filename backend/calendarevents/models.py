@@ -12,6 +12,7 @@ class CalendarEvent(models.Model):
     end_time = models.DateTimeField()
     all_day = models.BooleanField(default=False)
     color = models.CharField(max_length=7, default='#3b82f6')
+    embedding = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

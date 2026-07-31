@@ -34,6 +34,15 @@ export interface CalendarEvent {
   color: string
 }
 
+export interface CalendarEventInput {
+  title: string
+  description: string
+  start_time: string
+  end_time: string
+  all_day: boolean
+  color: string
+}
+
 export interface Email {
   id: string
   account: string
@@ -105,6 +114,7 @@ export const api = {
   },
   calendar: {
     list: () => fetchJSON<CalendarEvent[]>('/calendar-events/'),
+    create: (data: CalendarEventInput) => mutate<CalendarEvent>('/calendar-events/', 'POST', data),
   },
   emails: {
     list: () => fetchJSON<Email[]>('/emails/'),
