@@ -7,6 +7,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Task.objects.none()
         return Task.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):

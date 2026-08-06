@@ -1,6 +1,14 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { FileText, FileSpreadsheet, Upload, Check } from 'lucide-react'
+import { FileText, FileSpreadsheet, Upload, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { api, type Document } from '@/lib/api'
 import { useDocuments } from '@/hooks/use-documents'
 import { useQueryClient } from '@tanstack/react-query'
@@ -36,23 +44,41 @@ export function Documents() {
   const queryClient = useQueryClient()
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [uploadedName, setUploadedName] = useState<string | null>(null)
+  const [uploadFileName, setUploadFileName] = useState('')
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
+  const [docToDelete, setDocToDelete] = useState<Document | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleDelete = useCallback(async () => {
+    if (!docToDelete) return
+    setDeleting(true)
+    try {
+      await api.documents.delete(docToDelete.id)
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      setDocToDelete(null)
+    } catch (e) {
+      console.error('Delete failed', e)
+    }
+    setDeleting(false)
+  }, [docToDelete, queryClient])
 
   const handleUpload = useCallback(async (file: File) => {
     setUploading(true)
-    setUploadedName(null)
+    setUploadFileName(file.name)
+    setUploadProgress(0)
     try {
-      await api.documents.upload(file)
-      setUploadedName(file.name)
+      await api.documents.upload(file, undefined, (p) => setUploadProgress(p))
+      toast.success(file.name, { description: 'Uploaded successfully' })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
-      setTimeout(() => setUploadedName(null), 2000)
     } catch (e) {
       console.error('Upload failed', e)
+      toast.error('Upload failed', { description: 'Please try again.' })
     }
     setUploading(false)
+    setUploadProgress(0)
   }, [queryClient])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -113,26 +139,31 @@ export function Documents() {
               initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
               animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
               exit={shouldReduceMotion ? {} : { opacity: 0 }}
-              className="flex flex-col items-center gap-3"
+              className="w-full max-w-sm flex flex-col items-center gap-4"
             >
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+              <div className="flex items-center gap-2.5 w-full">
+                <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-accent" strokeWidth={1.5} />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-[13px] font-medium text-foreground truncate">{uploadFileName}</p>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">
+                    {uploadProgress}% · Uploading
+                  </p>
+                </div>
               </div>
-              <p className="text-[13px] text-muted-foreground">Uploading...</p>
-            </motion.div>
-          ) : uploadedName ? (
-            <motion.div
-              key="done"
-              initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
-              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
-              exit={shouldReduceMotion ? {} : { opacity: 0 }}
-              className="flex flex-col items-center gap-3"
-            >
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Check className="w-5 h-5 text-green-600" strokeWidth={1.5} />
+              <div className="w-full h-1.5 rounded-full bg-accent/10 overflow-hidden">
+                <div
+                  className="h-full w-full rounded-full bg-accent"
+                  style={{
+                    transform: `scaleX(${uploadProgress / 100})`,
+                    transformOrigin: 'left',
+                    transition: shouldReduceMotion
+                      ? 'none'
+                      : 'transform 250ms cubic-bezier(0.23, 1, 0.32, 1)',
+                  }}
+                />
               </div>
-              <p className="text-[13px] text-foreground font-medium">{uploadedName}</p>
-              <p className="text-[12px] text-muted-foreground">Uploaded successfully</p>
             </motion.div>
           ) : (
             <motion.div
@@ -216,6 +247,16 @@ export function Documents() {
                         {doc.file_type.toUpperCase()} · {formatSize(doc.file_size)} · {formatDate(doc.updated_at)}
                       </p>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDocToDelete(doc)
+                      }}
+                      className="flex items-center justify-center w-8 h-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      aria-label={`Delete ${doc.filename}`}
+                    >
+                      <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
                   </div>
                 </motion.div>
               )
@@ -231,6 +272,32 @@ export function Documents() {
           setSelectedDoc(null)
         }}
       />
+      <Dialog open={!!docToDelete} onOpenChange={(o) => !o && !deleting && setDocToDelete(null)}>
+        <DialogContent className="rounded-2xl p-6 gap-0">
+          <DialogHeader className="p-0">
+            <DialogTitle className="text-[15px] font-semibold text-left">Delete file?</DialogTitle>
+            <DialogDescription className="mt-1.5">
+              <span className="font-medium text-foreground">{docToDelete?.filename}</span> will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-end gap-2 mt-6">
+            <button
+              onClick={() => setDocToDelete(null)}
+              className="px-4 py-1.5 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
+            >
+              No
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

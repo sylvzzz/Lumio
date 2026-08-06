@@ -1,5 +1,7 @@
-import { FileText, FileSpreadsheet, Download, FileIcon } from 'lucide-react'
-import type { Document } from '@/lib/api'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { FileText, FileSpreadsheet, Download, FileIcon, Trash2 } from 'lucide-react'
+import { api, type Document } from '@/lib/api'
 import {
   Dialog,
   DialogContent,
@@ -46,11 +48,26 @@ function getDownloadUrl(doc: Document) {
 }
 
 export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
+  const [deleting, setDeleting] = useState(false)
+  const queryClient = useQueryClient()
+
   if (!doc) return null
 
   const Icon = iconMap[doc.file_type] || FileIcon
   const color = colorMap[doc.file_type] || 'text-muted-foreground'
   const isPdf = doc.file_type === 'pdf'
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await api.documents.delete(doc.id)
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      onClose()
+    } catch (e) {
+      console.error(e)
+    }
+    setDeleting(false)
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -64,14 +81,24 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
               </DialogTitle>
             </div>
           </DialogHeader>
-          <a
-            href={getDownloadUrl(doc)}
-            download={doc.filename}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors shrink-0"
-          >
-            <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-            Download
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+            <a
+              href={getDownloadUrl(doc)}
+              download={doc.filename}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Download
+            </a>
+          </div>
         </div>
 
         <div className={isPdf ? '' : 'p-6 space-y-4'}>

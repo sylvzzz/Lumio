@@ -15,6 +15,8 @@ class DocumentFolderViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentFolderSerializer
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return DocumentFolder.objects.none()
         return DocumentFolder.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -33,7 +35,15 @@ class DocumentViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return Document.objects.none()
         return Document.objects.filter(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        storage_path = instance.storage_path
+        if storage_path and os.path.exists(storage_path):
+            os.remove(storage_path)
+        instance.delete()
 
     def create(self, request, *args, **kwargs):
         serializer = DocumentUploadSerializer(data=request.data)
@@ -112,16 +122,3 @@ class DocumentViewSet(viewsets.ModelViewSet):
         )
         resp['X-Frame-Options'] = 'SAMEORIGIN'
         return resp
-        doc = self.get_object()
-        if not os.path.exists(doc.storage_path):
-            raise Http404('File not found')
-        content_type = {
-            'pdf': 'application/pdf',
-            'csv': 'text/csv',
-            'txt': 'text/plain',
-        }.get(doc.file_type, 'application/octet-stream')
-        return FileResponse(
-            open(doc.storage_path, 'rb'),
-            content_type=content_type,
-            filename=doc.filename,
-        )

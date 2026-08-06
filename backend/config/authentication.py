@@ -6,7 +6,7 @@ class DevAuthentication(BaseAuthentication):
     def authenticate(self, request):
         if settings.DEBUG:
             from accounts.models import User
-            user = User.objects.filter(email='alex@lumio.io').first()
+            user = User.objects.filter(email='diogolbsilva2006@gmail.com').first()
             if user:
                 return (user, None)
         return None

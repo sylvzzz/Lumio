@@ -114,7 +114,7 @@ export function TopHeader() {
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1, ease: [0.42, 0, 0.58, 1] }}
         >
-          Good morning, Alex.
+          Good morning, Diogo.
         </motion.h1>
         <motion.p
           className="text-sm text-muted-foreground mt-1"

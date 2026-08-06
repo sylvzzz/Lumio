@@ -1,10 +1,14 @@
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.utils.functional import SimpleLazyObject
 from accounts.models import User
 
 
 def get_dev_user():
-    return User.objects.filter(email='alex@lumio.io').first()
+    if not settings.DEBUG:
+        return AnonymousUser()
+    user = User.objects.filter(email='diogolbsilva2006@gmail.com').first()
+    return user or AnonymousUser()
 
 
 class DevAutoAuthMiddleware:

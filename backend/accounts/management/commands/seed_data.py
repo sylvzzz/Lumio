@@ -15,17 +15,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         user, created = User.objects.get_or_create(
-            email='alex@lumio.io',
+            email='diogolbsilva2006@gmail.com',
             defaults={
-                'username': 'alex',
-                'first_name': 'Alex',
-                'last_name': 'Morgan',
+                'username': 'diogo',
+                'first_name': 'Diogo',
+                'last_name': 'Silva',
             },
         )
         if created:
             user.set_password('password123')
             user.save()
-            self.stdout.write(self.style.SUCCESS('Created user: alex@lumio.io'))
+            self.stdout.write(self.style.SUCCESS('Created user: diogolbsilva2006@gmail.com'))
 
         now = tz.now()
 
@@ -87,16 +87,16 @@ class Command(BaseCommand):
         account, _ = EmailAccount.objects.get_or_create(
             user=user,
             provider='gmail',
-            email='alex@lumio.io',
+            email='diogolbsilva2006@gmail.com',
             defaults={'access_token': 'mock-token'},
         )
 
         # Emails
         emails_data = [
-            {'provider_id': 'msg1', 'thread_id': 'thread1', 'subject': 'Project meeting tomorrow', 'from_email': 'sarah@company.io', 'from_name': 'Sarah Chen', 'to': ['alex@lumio.io'], 'body_text': 'Hey Alex, just a reminder about the project meeting tomorrow at 10am.', 'received_at': now - timedelta(minutes=2), 'is_read': False},
-            {'provider_id': 'msg2', 'thread_id': 'thread2', 'subject': 'Interview invitation', 'from_email': 'recruiting@google.com', 'from_name': 'Google Workspace', 'to': ['alex@lumio.io'], 'body_text': 'We are pleased to invite you for an interview.', 'received_at': now - timedelta(hours=1), 'is_read': False},
-            {'provider_id': 'msg3', 'thread_id': 'thread3', 'subject': 'Pull request approved', 'from_email': 'noreply@github.com', 'from_name': 'GitHub', 'to': ['alex@lumio.io'], 'body_text': 'Your pull request #342 has been approved.', 'received_at': now - timedelta(hours=3), 'is_read': True},
-            {'provider_id': 'msg4', 'thread_id': 'thread4', 'subject': 'Shared with you', 'from_email': 'noreply@notion.so', 'from_name': 'Notion', 'to': ['alex@lumio.io'], 'body_text': 'Sarah shared a page with you.', 'received_at': now - timedelta(hours=5), 'is_read': True},
+            {'provider_id': 'msg1', 'thread_id': 'thread1', 'subject': 'Project meeting tomorrow', 'from_email': 'sarah@company.io', 'from_name': 'Sarah Chen', 'to': ['diogolbsilva2006@gmail.com'], 'body_text': 'Hey Diogo, just a reminder about the project meeting tomorrow at 10am.', 'received_at': now - timedelta(minutes=2), 'is_read': False},
+            {'provider_id': 'msg2', 'thread_id': 'thread2', 'subject': 'Interview invitation', 'from_email': 'recruiting@google.com', 'from_name': 'Google Workspace', 'to': ['diogolbsilva2006@gmail.com'], 'body_text': 'We are pleased to invite you for an interview.', 'received_at': now - timedelta(hours=1), 'is_read': False},
+            {'provider_id': 'msg3', 'thread_id': 'thread3', 'subject': 'Pull request approved', 'from_email': 'noreply@github.com', 'from_name': 'GitHub', 'to': ['diogolbsilva2006@gmail.com'], 'body_text': 'Your pull request #342 has been approved.', 'received_at': now - timedelta(hours=3), 'is_read': True},
+            {'provider_id': 'msg4', 'thread_id': 'thread4', 'subject': 'Shared with you', 'from_email': 'noreply@notion.so', 'from_name': 'Notion', 'to': ['diogolbsilva2006@gmail.com'], 'body_text': 'Sarah shared a page with you.', 'received_at': now - timedelta(hours=5), 'is_read': True},
         ]
         for data in emails_data:
             Email.objects.get_or_create(account=account, provider_id=data['provider_id'], defaults=data)

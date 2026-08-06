@@ -98,7 +98,7 @@ export function Lumio() {
                 >
                   <div
                     className={cn(
-                      'max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed',
+                      'max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed border border-border/50',
                       msg.role === 'user'
                         ? 'bg-secondary text-foreground rounded-br-md'
                         : 'bg-secondary/50 text-foreground rounded-bl-md',
@@ -117,7 +117,7 @@ export function Lumio() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
               >
-                <div className="bg-secondary/50 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="bg-secondary/50 border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
                   <div className="flex gap-1">
                     {[0, 1, 2].map((i) => (
                       <motion.div

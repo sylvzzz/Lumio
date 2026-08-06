@@ -95,10 +95,10 @@ export function Sidebar() {
           transition={{ delay: 0.4, duration: 0.4 }}
         >
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center ring-1 ring-border">
-            <span className="text-[13px] font-medium text-accent">A</span>
+            <span className="text-[13px] font-medium text-accent">D</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium truncate">Alex Morgan</p>
+            <p className="text-[13px] font-medium truncate">Diogo Silva</p>
             <p className="text-[11px] text-muted-foreground truncate">Personal Workspace</p>
           </div>
         </motion.div>

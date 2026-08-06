@@ -179,3 +179,38 @@
     opacity: 1 !important;
   }
 }
+
+/* Sonner toasts themed to Lumio's design tokens */
+html [data-sonner-toaster] {
+  --width: 360px;
+  --gap: 8px;
+}
+
+html [data-sonner-toast][data-styled='true'] {
+  padding: 12px 14px;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-apple-lg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  font-size: 13px;
+}
+
+html [data-sonner-toaster][data-sonner-theme='light'],
+html [data-sonner-toaster][data-sonner-theme='dark'] {
+  --normal-bg: color-mix(in srgb, var(--card) 72%, transparent);
+  --normal-border: color-mix(in srgb, var(--border) 60%, transparent);
+  --normal-text: var(--card-foreground);
+  --normal-button: color-mix(in srgb, var(--muted) 80%, transparent);
+  --normal-button-hover: var(--muted);
+}
+
+html [data-sonner-toast][data-styled='true'] [data-title] {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+html [data-sonner-toast][data-styled='true'] [data-description] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.4;
+}

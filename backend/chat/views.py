@@ -11,6 +11,8 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
     serializer_class = ChatSessionSerializer
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return ChatSession.objects.none()
         return ChatSession.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -22,6 +24,8 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
     authentication_classes = [DevAuthentication, TokenAuthentication, SessionAuthentication]
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return ChatMessage.objects.none()
         return ChatMessage.objects.filter(session__user=self.request.user)
 
     def create(self, request, *args, **kwargs):

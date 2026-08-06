@@ -8,6 +8,7 @@ import { Documents } from './pages/Documents'
 import { Calendar } from './pages/Calendar'
 import { Tasks } from './pages/Tasks'
 import { Lumio } from './pages/Lumio'
+import { Toaster } from './components/ui/sonner'
 
 const queryClient = new QueryClient()
 
@@ -27,6 +28,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <Toaster />
     </QueryClientProvider>
   )
 }

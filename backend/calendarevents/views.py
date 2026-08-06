@@ -7,6 +7,8 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
     serializer_class = CalendarEventSerializer
 
     def get_queryset(self):
+        if not self.request.user.is_authenticated:
+            return CalendarEvent.objects.none()
         return CalendarEvent.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
