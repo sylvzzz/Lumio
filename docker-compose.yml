@@ -17,6 +17,8 @@ services:
     environment:
       DJANGO_DEBUG: "True"
       POSTGRES_HOST: db
+    env_file:
+      - ./backend/.env
     depends_on:
       - db
     volumes:
