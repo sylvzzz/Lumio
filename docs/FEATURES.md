@@ -31,7 +31,7 @@
 - Context-aware across notes, documents, emails, and calendar
 - RAG pipeline: embed content → pgvector → retrieve → LLM response
 - Answers questions, summarizes, finds information
-- Powered by Nvidia free-tier LLM
+- Powered by Groq free-tier LLM
 
 ### Authentication
 - Google OAuth login

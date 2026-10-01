@@ -55,7 +55,7 @@ Every component should feel polished and intentionally designed. Loading states,
 | Frontend | React, TypeScript, Tailwind CSS, shadcn/ui |
 | Backend | Django + Django REST Framework |
 | Database | PostgreSQL with pgvector |
-| AI | Nvidia free-tier LLM (model TBD) |
+| AI | Groq free-tier LLM (model TBD) |
 | Auth | Google OAuth (email/password optional) |
 | Email | Gmail API, Outlook API (OAuth) |
 | File Storage | Local (dev), S3 (prod) |

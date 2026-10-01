@@ -23,7 +23,7 @@
 - [ ] Embedding pipeline for notes, docs, emails
 - [ ] pgvector indexing
 - [ ] RAG retrieval endpoint
-- [ ] Nvidia LLM integration
+- [ ] Groq LLM integration
 - [ ] Chat UI (persistent panel)
 - [ ] Session history
 

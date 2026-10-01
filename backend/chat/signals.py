@@ -66,14 +66,3 @@ def connect_signals():
         embedding = get_embedding_for_content(text)
         if embedding:
             Task.objects.filter(pk=instance.pk).update(embedding=embedding)
-
-    from notes.models import Note
-    from documents.models import Document
-    from emails.models import Email
-    from calendarevents.models import CalendarEvent
-    from tasks.models import Task
-    post_save.connect(auto_embed_note, sender=Note, weak=False)
-    post_save.connect(auto_embed_document, sender=Document, weak=False)
-    post_save.connect(auto_embed_email, sender=Email, weak=False)
-    post_save.connect(auto_embed_calendar_event, sender=CalendarEvent, weak=False)
-    post_save.connect(auto_embed_task, sender=Task, weak=False)

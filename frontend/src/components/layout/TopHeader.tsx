@@ -240,7 +240,7 @@ export function TopHeader() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
         >
-          <span className="text-[13px] font-medium text-accent">A</span>
+          <span className="text-[13px] font-medium text-accent">D</span>
         </motion.div>
       </div>
     </motion.div>

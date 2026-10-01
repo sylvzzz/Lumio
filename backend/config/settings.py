@@ -98,11 +98,15 @@ CORS_ALLOWED_ORIGINS = config(
     default='http://localhost:5173,http://127.0.0.1:5173',
 ).split(',')
 
-# Nvidia AI API
+# Chat (Groq, OpenAI-compatible)
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
+GROQ_API_BASE = config('GROQ_API_BASE', default='https://api.groq.com/openai/v1')
+GROQ_LLM_MODEL = config('GROQ_LLM_MODEL', default='openai/gpt-oss-120b')
+
+# Embeddings (NVIDIA, OpenAI-compatible) — Groq has no embedding models
 NVIDIA_API_KEY = config('NVIDIA_API_KEY', default='')
 NVIDIA_API_BASE = config('NVIDIA_API_BASE', default='https://integrate.api.nvidia.com/v1')
-NVIDIA_EMBEDDING_MODEL = config('NVIDIA_EMBEDDING_MODEL', default='nvidia/nv-embedqa-e5-v5')
-NVIDIA_LLM_MODEL = config('NVIDIA_LLM_MODEL', default='meta/llama-3.1-8b-instruct')
+NVIDIA_EMBEDDING_MODEL = config('NVIDIA_EMBEDDING_MODEL', default='nvidia/nemotron-3-embed-1b')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (

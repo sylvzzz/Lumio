@@ -13,15 +13,12 @@ Relevant workspace context (if any):
 {context}"""
 
 
-def search_similar_content(user, query_embedding: list[float], limit: int = 10) -> list[dict]:
-    if not query_embedding:
-        return []
-
+def search_similar_content(user, query_embedding: list[float] | None, limit: int = 10) -> list[dict]:
     from django.db import connection
 
     results = []
 
-    if connection.vendor == 'postgresql':
+    if connection.vendor == 'postgresql' and query_embedding:
         vector_literal = '[' + ','.join(str(v) for v in query_embedding) + ']'
 
         queries = [
@@ -92,7 +89,10 @@ def search_similar_content(user, query_embedding: list[float], limit: int = 10) 
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).warning('Search failed for %s: %s', label, e)
-    else:
+
+    # Fallback (no embeddings, non-Postgres DB, or empty vector results): surface
+    # the most recent content so freshly uploaded items are always in context.
+    if not results:
         from notes.models import Note
         from documents.models import Document
         from emails.models import Email
@@ -101,7 +101,7 @@ def search_similar_content(user, query_embedding: list[float], limit: int = 10) 
 
         by_type: dict[str, list[tuple[str, str]]] = {
             'note': [(str(n.id), n.content[:500]) for n in Note.objects.filter(user=user)[:limit]],
-            'document': [(str(d.id), (d.extracted_text or d.filename)[:500]) for d in Document.objects.filter(user=user)[:limit]],
+            'document': [(str(d.id), f"{d.filename}: {(d.extracted_text or '')[:400]}") for d in Document.objects.filter(user=user)[:limit]],
             'email': [(str(e.id), (e.body_text or e.subject)[:500]) for e in Email.objects.filter(account__user=user)[:limit]],
             'calendar': [
                 (str(ev.id), (f"{ev.title}\n{ev.description}" if ev.description else ev.title)[:500],
@@ -478,9 +478,9 @@ def answer_question(
     is_followup = bool(previous_user_content) and _looks_like_followup(question)
     retrieval_question = f"{previous_user_content} {question}" if is_followup else question
 
-    query_embedding = embed_text(retrieval_question)
-    if not query_embedding:
-        return None, []
+    # Retrieval is best-effort: if embeddings are unavailable (provider without
+    # an embedding model, missing key) still answer from calendar context + LLM.
+    query_embedding = embed_text(retrieval_question, input_type='query')
 
     tz = _user_timezone(user)
     local_now = timezone.localtime(timezone.now(), tz)

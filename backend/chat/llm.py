@@ -2,7 +2,7 @@ import requests
 from django.conf import settings
 
 
-def embed_text(text: str) -> list[float] | None:
+def embed_text(text: str, input_type: str = 'passage') -> list[float] | None:
     api_key = settings.NVIDIA_API_KEY
     if not api_key:
         return None
@@ -17,7 +17,7 @@ def embed_text(text: str) -> list[float] | None:
             json={
                 'input': text,
                 'model': settings.NVIDIA_EMBEDDING_MODEL,
-                'input_type': 'query',
+                'input_type': input_type,
             },
             timeout=30,
         )
@@ -34,12 +34,12 @@ def chat_completion(
     messages: list[dict[str, str]],
     system_prompt: str | None = None,
 ) -> str | None:
-    api_key = settings.NVIDIA_API_KEY
+    api_key = settings.GROQ_API_KEY
     if not api_key:
         return None
 
     payload = {
-        'model': settings.NVIDIA_LLM_MODEL,
+        'model': settings.GROQ_LLM_MODEL,
         'messages': [],
         'temperature': 0.3,
         'max_tokens': 1024,
@@ -52,7 +52,7 @@ def chat_completion(
 
     try:
         resp = requests.post(
-            f'{settings.NVIDIA_API_BASE}/chat/completions',
+            f'{settings.GROQ_API_BASE}/chat/completions',
             headers={
                 'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json',
