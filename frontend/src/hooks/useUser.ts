@@ -4,6 +4,7 @@ export interface UserProfile {
   name?: string | null
   gender?: string | null
   age?: number | null
+  language?: 'pt' | 'en' | string | null
 }
 
 export function useUser() {

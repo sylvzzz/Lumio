@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useUser } from '@/hooks/useUser'
 import {
   Bot,
   Home,
@@ -12,20 +13,22 @@ import {
   HelpCircle,
 } from 'lucide-react'
 
-const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/calendar', icon: Calendar, label: 'Calendar' },
-  { to: '/notes', icon: StickyNote, label: 'Notes' },
-  { to: '/documents', icon: FileText, label: 'Documents' },
-  { to: '/inbox', icon: Inbox, label: 'Emails' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
-  { to: '/lumio', icon: Bot, label: 'Lumio' },
-  { to: '/faq', icon: HelpCircle, label: 'FAQ' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-]
-
 export function Sidebar() {
   const shouldReduceMotion = useReducedMotion()
+  const { user } = useUser()
+  const language = user.language ?? 'pt'
+
+  const navItems = [
+    { to: '/', icon: Home, label: language === 'pt' ? 'Início' : 'Home' },
+    { to: '/calendar', icon: Calendar, label: language === 'pt' ? 'Calendário' : 'Calendar' },
+    { to: '/notes', icon: StickyNote, label: language === 'pt' ? 'Notas' : 'Notes' },
+    { to: '/documents', icon: FileText, label: language === 'pt' ? 'Documentos' : 'Documents' },
+    { to: '/inbox', icon: Inbox, label: language === 'pt' ? 'Emails' : 'Emails' },
+    { to: '/tasks', icon: CheckSquare, label: language === 'pt' ? 'Tarefas' : 'Tasks' },
+    { to: '/lumio', icon: Bot, label: language === 'pt' ? 'Lumio' : 'Lumio' },
+    { to: '/faq', icon: HelpCircle, label: language === 'pt' ? 'FAQ' : 'FAQ' },
+    { to: '/settings', icon: Settings, label: language === 'pt' ? 'Definições' : 'Settings' },
+  ]
 
   return (
     <aside className="w-[260px] h-full flex flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">

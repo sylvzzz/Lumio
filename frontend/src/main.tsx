@@ -17,6 +17,7 @@ import { NotFound } from '@/pages/NotFound'
 import { Intro } from '@/pages/Intro'
 import { useUser } from '@/hooks/useUser'
 import { UserOnboarding } from '@/components/UserOnboarding'
+import { Toaster } from '@/components/ui/sonner'
 
 const queryClient = new QueryClient()
 
@@ -49,7 +50,7 @@ function Root() {
   })
 
   if (loading) return null
-  
+
   if (showIntro) {
     return (
       <Intro
@@ -60,7 +61,7 @@ function Root() {
       />
     )
   }
-  
+
   if (needsOnboarding) {
     return <UserOnboarding onComplete={(u) => updateUser(u)} />
   }
@@ -68,6 +69,7 @@ function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
+      <Toaster />
     </QueryClientProvider>
   )
 }

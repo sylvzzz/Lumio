@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useUser } from '@/hooks/useUser'
 import { Bot, FileText, StickyNote, Calendar, Mail, Brain, ArrowRight, Moon, Sun, Home, CheckSquare, Search, Send, User } from 'lucide-react'
 
 interface IntroProps {
@@ -81,6 +82,8 @@ const mockEvents = [
 ]
 
 export function Intro({ onContinue }: IntroProps) {
+  const { user } = useUser()
+  const language = user.language ?? 'pt'
   return (
     <div className="min-h-screen bg-canvas relative overflow-hidden">
       <ThemeToggle />
@@ -156,8 +159,8 @@ export function Intro({ onContinue }: IntroProps) {
                 <div className="flex-1 p-10 overflow-hidden">
                   <div className="flex items-center justify-between mb-8">
                     <div>
-                      <h1 className="text-3xl font-semibold tracking-tight">Bom dia, Diogo</h1>
-                      <p className="text-sm text-muted-foreground mt-1">Tudo o que precisas está pronto.</p>
+                      <h1 className="text-3xl font-semibold tracking-tight">{language === 'pt' ? 'Bom dia, Diogo' : 'Good morning, Diogo'}</h1>
+                      <p className="text-sm text-muted-foreground mt-1">{language === 'pt' ? 'Tudo o que precisas está pronto.' : 'Everything you need is ready.'}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="relative w-56 h-9 bg-card rounded-xl border border-border/50 flex items-center px-3">

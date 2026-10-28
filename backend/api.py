@@ -84,6 +84,7 @@ class ChatMessageReq(BaseModel):
 class UserProfile(BaseModel):
     name: str | None = None
     gender: str | None = None
+    language: str | None = None
     age: int | None = None
 
 
@@ -538,7 +539,7 @@ def get_user() -> dict:
 @app.post("/user/")
 def create_user(user: UserProfile) -> dict:
     _ensure_data_dir()
-    data = {"name": user.name, "gender": user.gender, "age": user.age}
+    data = {"name": user.name, "gender": user.gender, "age": user.age, "language": user.language}
     _save_json(USER_FILE, data)
     return data
 
@@ -549,6 +550,8 @@ def update_user(user: UserProfile) -> dict:
     data = _load_json(USER_FILE, {})
     if user.name is not None:
         data["name"] = user.name
+    if user.language is not None:
+        data["language"] = user.language
     if user.gender is not None:
         data["gender"] = user.gender
     if user.age is not None:
