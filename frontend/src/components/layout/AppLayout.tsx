@@ -7,11 +7,8 @@ import { TopHeader } from './TopHeader'
 import { AIPanel } from './AIPanel'
 import { useAIPanelStore } from '@/store/ai-panel'
 
-const noHeaderRoutes = ['/']
-
 export function AppLayout() {
   const location = useLocation()
-  const showHeader = noHeaderRoutes.includes(location.pathname)
   const shouldReduceMotion = useReducedMotion()
   const open = useAIPanelStore((s) => s.open)
   const width = useAIPanelStore((s) => s.width)
@@ -27,7 +24,7 @@ export function AppLayout() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 overflow-y-auto px-10 py-8">
-          {showHeader && <TopHeader />}
+          {location.pathname === '/' && <TopHeader />}
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

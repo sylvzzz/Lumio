@@ -1,13 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Search, Bell, Settings, FileText, StickyNote, Mail, Calendar, ArrowRight, Moon, Sun } from 'lucide-react'
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
+import { Search, Moon, Sun, FileText, StickyNote, Calendar, ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu'
+import { useUser } from '@/hooks/useUser'
 
 interface SearchResult {
   id: string
@@ -17,29 +12,17 @@ interface SearchResult {
   url: string
 }
 
-const iconMap: Record<string, typeof StickyNote> = {
-  note: StickyNote,
-  document: FileText,
-  email: Mail,
-  calendar: Calendar,
-}
-
-const colorMap: Record<string, string> = {
-  note: 'text-accent',
-  document: 'text-red-500',
-  email: 'text-blue-500',
-  calendar: 'text-orange-500',
-}
-
-const labelMap: Record<string, string> = {
-  note: 'Note',
-  document: 'Document',
-  email: 'Email',
-  calendar: 'Event',
+function getGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Bom dia'
+  if (hour < 18) return 'Boa tarde'
+  return 'Boa noite'
 }
 
 export function TopHeader() {
   const shouldReduceMotion = useReducedMotion()
+  const { user } = useUser()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
@@ -52,7 +35,6 @@ export function TopHeader() {
   })
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -80,7 +62,7 @@ export function TopHeader() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => doSearch(query), 200)
+    debounceRef.current = setTimeout(() => doSearch(query), 150)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [query, doSearch])
 
@@ -100,6 +82,8 @@ export function TopHeader() {
     navigate(result.url)
   }
 
+  const displayName = user?.name?.trim() || ''
+
   return (
     <motion.div
       className="flex items-center justify-between mb-10"
@@ -114,7 +98,7 @@ export function TopHeader() {
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.1, ease: [0.42, 0, 0.58, 1] }}
         >
-          Good morning, Diogo.
+          {getGreeting()}{displayName ? `, ${displayName}` : ''}
         </motion.h1>
         <motion.p
           className="text-sm text-muted-foreground mt-1"
@@ -122,14 +106,14 @@ export function TopHeader() {
           animate={shouldReduceMotion ? {} : { opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.15 }}
         >
-          Everything you need is ready.
+          Tudo o que precisas está pronto.
         </motion.p>
       </div>
       <div className="flex items-center gap-3">
         <div ref={containerRef} className="relative">
           <motion.div
             className="relative"
-            animate={{ width: open || query ? 320 : 224 }}
+            animate={{ width: open || query ? 340 : 224 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
@@ -139,7 +123,7 @@ export function TopHeader() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
-              placeholder="Search everything..."
+              placeholder="Pesquisar páginas, notas, documentos..."
               className="w-full h-9 bg-card rounded-xl border border-border/50 pl-9 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
             />
             {loading && (
@@ -148,100 +132,43 @@ export function TopHeader() {
               </div>
             )}
           </motion.div>
-
           <AnimatePresence>
-            {open && (
+            {open && results.length > 0 && (
               <motion.div
-                initial={shouldReduceMotion ? {} : { opacity: 0, y: 6, scale: 0.97 }}
-                animate={shouldReduceMotion ? {} : { opacity: 1, y: 0, scale: 1 }}
-                exit={shouldReduceMotion ? {} : { opacity: 0, y: 4, scale: 0.97 }}
-                transition={{ duration: 0.15, ease: [0.42, 0, 0.58, 1] }}
-                className="absolute top-full right-0 mt-2 w-[480px] bg-popover rounded-2xl border border-border/50 shadow-apple-lg overflow-hidden z-50"
-                style={{ transformOrigin: 'top right' }}
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="absolute top-full mt-2 w-full bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50"
               >
-                {results.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <p className="text-[13px] text-muted-foreground">No results found.</p>
-                  </div>
-                ) : (
-                  <div className="py-2">
-                    <p className="px-4 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                      {results.length} result{results.length !== 1 ? 's' : ''}
-                    </p>
-                    {results.map((result) => {
-                      const Icon = iconMap[result.type] || StickyNote
-                      const color = colorMap[result.type] || 'text-muted-foreground'
-                      return (
-                        <motion.button
-                          key={`${result.type}-${result.id}`}
-                          onClick={() => handleSelect(result)}
-                          className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-secondary/50 transition-colors text-left"
-                          whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-                          transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                        >
-                          <div className="w-8 h-8 rounded-xl bg-secondary flex items-center justify-center shrink-0 mt-0.5">
-                            <Icon className={`w-4 h-4 ${color}`} strokeWidth={1.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-medium text-foreground truncate">
-                                {result.title}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md shrink-0">
-                                {labelMap[result.type]}
-                              </span>
-                            </div>
-                            {result.preview && (
-                              <p className="text-[12px] text-muted-foreground mt-0.5 line-clamp-1">
-                                {result.preview}
-                              </p>
-                            )}
-                          </div>
-                          <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0 mt-1.5" strokeWidth={1.5} />
-                        </motion.button>
-                      )
-                    })}
-                  </div>
-                )}
+                {results.map((result) => (
+                  <button
+                    key={result.id + result.url}
+                    onClick={() => handleSelect(result)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-accent/5 transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                      {result.url === '/calendar' ? <Calendar className="w-4 h-4 text-orange-500" /> :
+                       result.url === '/notes' || result.url === '/tasks' ? <StickyNote className="w-4 h-4 text-accent" /> :
+                       <FileText className="w-4 h-4 text-red-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{result.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{result.preview}</p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                ))}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
-        <motion.button
-          className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors relative"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
+        <button
+          onClick={() => setDark(!dark)}
+          className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
         >
-          <Bell className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive">
-            <span className="absolute inset-0 rounded-full bg-destructive animate-ping opacity-50" />
-          </span>
-        </motion.button>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={
-            <motion.button
-              className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-secondary transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-            </motion.button>
-          } />
-          <DropdownMenuContent align="end" sideOffset={8}>
-            <DropdownMenuItem onClick={() => setDark((d) => !d)}>
-              {dark ? <Sun className="w-4 h-4" strokeWidth={1.5} /> : <Moon className="w-4 h-4" strokeWidth={1.5} />}
-              {dark ? 'Light mode' : 'Dark mode'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <motion.div
-          className="w-9 h-9 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center ring-1 ring-border cursor-pointer"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          <span className="text-[13px] font-medium text-accent">D</span>
-        </motion.div>
+          {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
       </div>
     </motion.div>
   )

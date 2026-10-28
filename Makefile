@@ -1,25 +1,21 @@
-.PHONY: dev dev-backend dev-frontend migrate migrations shell user help
+FOLDER := $(shell pwd)
+VENV = $(FOLDER)/.venv
+REQ = requirements.txt
+PY = $(VENV)/bin/python
+PIP = $(VENV)/bin/pip
+
+
+install:
+		python3 -m venv .venv; cd backend; $(PIP) install -r $(REQ); cd ../frontend; npm install
 
 dev: ## Start all services
 	docker compose up --build
 
 dev-backend: ## Run backend locally
-	cd backend && python3 manage.py runserver
+	cd backend && $(PY) -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
 dev-frontend: ## Run frontend locally
 	cd frontend && npm run dev
 
-migrate: ## Run Django migrations
-	cd backend && python manage.py migrate
 
-migrations: ## Make Django migrations
-	cd backend && python manage.py makemigrations
-
-shell: ## Django shell
-	cd backend && python manage.py shell
-
-user: ## Create superuser
-	cd backend && python manage.py createsuperuser
-
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+.PHONY: dev dev-backend dev-frontend migrate migrations shell user help

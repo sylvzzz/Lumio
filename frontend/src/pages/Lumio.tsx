@@ -1,170 +1,186 @@
-import { useRef, useEffect } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Bot, Send, SquarePen } from 'lucide-react'
-import { useChatComposer } from '@/hooks/use-chat-composer'
-import { Markdown } from '@/components/Markdown'
-import { cn } from '@/lib/utils'
+import { useState, useRef, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Send, Bot, User } from 'lucide-react'
+import { useUser } from '@/hooks/useUser'
 
-const SUGGESTIONS = [
-  'What\'s on my calendar today?',
-  'Summarize my unread emails',
-  'What are my upcoming meetings?',
-  'What do my notes say about Q4 planning?',
-]
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+}
 
 export function Lumio() {
-  const shouldReduceMotion = useReducedMotion()
-  const { input, setInput, sending, messages, isLoading, currentSession, handleSend, handleNewChat } =
-    useChatComposer()
+  const { user } = useUser()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, sending])
+  }, [messages])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+  const createSession = async () => {
+    const res = await fetch('/api/chat-sessions/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Chat Lumio' }),
+    })
+    const data = await res.json()
+    setSessionId(data.id)
+    return data.id
+  }
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || loading) return
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+    }
+    setMessages((prev) => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+
+    try {
+      let sid = sessionId
+      if (!sid) {
+        sid = await createSession()
+      }
+
+      const res = await fetch('/api/chat-messages/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session: sid, content: userMsg.content, role: 'user' }),
+      })
+      const data = await res.json()
+
+      const aiMsg: Message = {
+        id: data.ai_response?.id || Date.now().toString() + '-ai',
+        role: 'assistant',
+        content: data.ai_response?.content || data.content || '',
+      }
+      setMessages((prev) => [...prev, aiMsg])
+    } catch (err) {
+      console.error(err)
+      const errorMsg: Message = {
+        id: Date.now().toString() + '-err',
+        role: 'assistant',
+        content: 'Ocorreu um erro ao processar a mensagem.',
+      }
+      setMessages((prev) => [...prev, errorMsg])
+    } finally {
+      setLoading(false)
+      inputRef.current?.focus()
     }
   }
 
-  const showEmptyState = !currentSession && !isLoading && messages.length === 0
+  const displayName = user?.name?.trim() || ''
 
   return (
-    <div className="mx-auto max-w-3xl h-[calc(100dvh-4rem)] flex flex-col animate-fade-in">
-      <div className="flex items-center justify-between pt-2 pb-6">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Lumio</h1>
-          <p className="text-muted-foreground text-sm mt-1">Your personal AI assistant</p>
-        </div>
-        <motion.button
-          onClick={handleNewChat}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border/50 bg-card text-[12px] font-medium text-foreground shadow-sm hover:bg-muted/60 transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          <SquarePen className="w-3.5 h-3.5" strokeWidth={1.5} />
-          New Chat
-        </motion.button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto rounded-2xl border border-border/30 bg-card shadow-sm">
-        {showEmptyState ? (
-          <div className="h-full flex flex-col items-center justify-center text-center px-8">
-            <motion.div
-              className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-5"
-              initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
-              animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 250, damping: 20 }}
-            >
-              <Bot className="w-7 h-7 text-accent" strokeWidth={1.5} />
-            </motion.div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">How can I help?</h2>
-            <p className="text-[13px] text-muted-foreground mt-2 max-w-sm">
-              Ask me anything about your notes, documents, emails, or calendar.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-md">
-              {SUGGESTIONS.map((suggestion, i) => (
-                <motion.button
-                  key={suggestion}
-                  onClick={() => handleSend(suggestion)}
-                  className="rounded-full border border-border/50 bg-background px-4 py-2 text-[12px] font-medium text-foreground hover:border-accent/40 hover:text-accent transition-colors"
-                  initial={shouldReduceMotion ? {} : { opacity: 0, y: 8 }}
-                  animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 + i * 0.06, type: 'spring', stiffness: 250, damping: 22 }}
-                  whileTap={shouldReduceMotion ? {} : { scale: 0.97 }}
-                >
-                  {suggestion}
-                </motion.button>
-              ))}
+    <div className="h-[calc(100vh-4rem)] flex flex-col -mx-10 -my-8">
+      <div className="flex-1 overflow-y-auto px-4 py-8">
+        {messages.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center space-y-4 max-w-2xl">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.4 }}
+                className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center mx-auto"
+              >
+                <Bot className="w-8 h-8 text-white" />
+              </motion.div>
+              <motion.h1
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="text-3xl font-semibold"
+              >
+                Olá{displayName ? `, ${displayName}` : ''}. Como posso ajudar?
+              </motion.h1>
+              <motion.p
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="text-muted-foreground"
+              >
+                Pergunta-me qualquer coisa sobre as tuas notas, documentos e calendário.
+              </motion.p>
             </div>
           </div>
         ) : (
-          <div className="px-5 py-6 space-y-5">
-            <AnimatePresence mode="popLayout">
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{
-                    type: 'spring',
-                    stiffness: 200,
-                    damping: 20,
-                    mass: 0.8,
-                  }}
-                  className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[85%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed border border-border/50',
-                      msg.role === 'user'
-                        ? 'bg-secondary text-foreground rounded-br-md'
-                        : 'bg-secondary/50 text-foreground rounded-bl-md',
-                    )}
-                  >
-                    <Markdown>{msg.content}</Markdown>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {sending && (
+          <div className="max-w-3xl mx-auto space-y-6">
+            {messages.map((msg) => (
               <motion.div
-                className="flex justify-start"
+                key={msg.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+                className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="bg-secondary/50 border border-border/50 rounded-2xl rounded-bl-md px-4 py-3">
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                    msg.role === 'user'
+                      ? 'bg-accent text-white rounded-br-md'
+                      : 'bg-card border border-border rounded-bl-md'
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                </div>
+                {msg.role === 'user' && (
+                  <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-accent" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+            {loading && (
+              <div className="flex gap-4">
+                <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-bl-md">
                   <div className="flex gap-1">
-                    {[0, 1, 2].map((i) => (
-                      <motion.div
-                        key={i}
-                        className="w-2 h-2 rounded-full bg-muted-foreground/40"
-                        animate={shouldReduceMotion ? {} : { y: [0, -4, 0] }}
-                        transition={shouldReduceMotion ? {} : {
-                          duration: 0.6,
-                          repeat: Infinity,
-                          delay: i * 0.15,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                    ))}
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      <div className="pt-4 pb-2">
-        <div className="flex items-center gap-2 bg-card border border-border/50 rounded-2xl px-4 py-3 shadow-sm focus-within:border-accent/40 transition-colors">
+      <div className="border-t border-border/50 p-4">
+        <form onSubmit={sendMessage} className="max-w-3xl mx-auto flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask Lumio anything..."
-            disabled={sending}
-            className="flex-1 text-[13px] bg-transparent placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
+            placeholder="Escreve a tua mensagem..."
+            disabled={loading}
+            className="flex-1 h-11 px-4 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-50"
           />
-          <motion.button
-            onClick={() => handleSend()}
-            disabled={sending || !input.trim()}
-            className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0 disabled:opacity-40"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
+          <button
+            type="submit"
+            disabled={!input.trim() || loading}
+            className="w-11 h-11 bg-accent text-white rounded-xl flex items-center justify-center hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <Send className="w-4 h-4 text-white" strokeWidth={1.5} />
-          </motion.button>
-        </div>
-        <p className="text-[11px] text-muted-foreground/70 text-center mt-3">
-          Lumio can access your notes, documents, emails, and calendar.
-        </p>
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
       </div>
     </div>
   )

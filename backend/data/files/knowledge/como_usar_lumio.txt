@@ -1,0 +1,40 @@
+Como usar o Lumio
+
+O que é o Lumio?
+O Lumio é o teu workspace pessoal com IA. Centraliza notas, documentos, emails, calendário e tarefas num só lugar, com um assistente inteligente que tem acesso a todo o teu conteúdo.
+
+Primeiros passos
+1. Configura o teu perfil no primeiro acesso (nome, idade e género).
+2. Carrega documentos (.PDF, .DOCX, .TXT, .MD) na secção Documentos.
+3. Cria notas, eventos no calendário e tarefas conforme necessidades.
+4. Usa o chat "Lumio" ou "Ask Lumio" para perguntar sobre o teu conteúdo.
+
+Funcionalidades principais
+
+Notas
+- Cria e edita notas rapidamente
+- Todas as notas são pesquisáveis pelo assistente
+
+Documentos
+- Upload de ficheiros suportados
+- O Lumio lê e indexa o conteúdo para responder com base neles
+- Pesquisa global em todos os documentos
+
+Calendário
+- Adiciona eventos com data, hora e descrição
+- Visualiza a agenda no dashboard e na página Calendário
+
+Tarefas
+- Cria tarefas pendentes/concluídas
+- Acompanha o que falta fazer no dashboard
+
+Chat com IA
+- Pergunta qualquer coisa sobre as tuas notas, documentos ou calendário
+- O assistente responde com base no teu conteúdo quando relevante
+- Podes ter conversas com histórico guardado
+
+Dicas
+- Sê específico nas perguntas para obter melhores respostas
+- Carrega documentos importantes para o assistente os ter em contexto
+- Usa a pesquisa global para encontrar rapidamente qualquer coisa
+- O tema claro/escuro pode ser alterado no header

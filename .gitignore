@@ -1,5 +1,6 @@
 node_modules/
 dist/
+backend/.env
 .env
 *.pyc
 __pycache__/
@@ -7,3 +8,7 @@ __pycache__/
 media/
 static/
 .python-version
+docs
+.venv
+.opencode
+opencode.json
