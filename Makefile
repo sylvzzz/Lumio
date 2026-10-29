@@ -8,9 +8,6 @@ PIP = $(VENV)/bin/pip
 install:
 		python3 -m venv .venv; cd backend; $(PIP) install -r $(REQ); cd ../frontend; npm install
 
-dev: ## Start all services
-	docker compose up --build
-
 dev-backend: ## Run backend locally
 	cd backend && $(PY) -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
@@ -29,4 +26,10 @@ backend-up:
 backend-down:
 		cd backend && docker compose up
 
-.PHONY: dev dev-backend dev-frontend migrate migrations shell user help
+app:
+	cd frontend; docker compose start; cd ../backend; docker compose start
+
+stop:
+	cd frontend; docker compose down; cd ../backend; docker compose down
+
+.PHONY: dev dev-backend dev-frontend frontend-up frontend-down backend-up backend-down app
