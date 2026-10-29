@@ -17,5 +17,16 @@ dev-backend: ## Run backend locally
 dev-frontend: ## Run frontend locally
 	cd frontend && npm run dev
 
+frontend-up:
+		cd frontend && docker compose up
+
+frontend-down:
+		cd frontend && docker compose down
+
+backend-up:
+		cd backend && docker compose up
+
+backend-down:
+		cd backend && docker compose up
 
 .PHONY: dev dev-backend dev-frontend migrate migrations shell user help
