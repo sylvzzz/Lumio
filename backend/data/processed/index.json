@@ -6,6 +6,24 @@
     "content": "Evento: Teste\nDescri\u00e7\u00e3o: \nIn\u00edcio: 2025-11-01T14:00:00\nFim: 2025-11-01T15:00:00\nTodo o dia: False\n"
   },
   {
+    "file_path": "data/files/6946d33c7d7f4f8b93d3e7ea3ed55f17_transcript-42.pdf",
+    "first_character_index": 0,
+    "last_character_index": 1904,
+    "content": "Core Curriculum\nName Details Grade* Workload\nrank 0\nLibft Reimplementation of key C standard library functions and custom utilities. 125 70 H\nrank 1\nft_printf Custom printf using variadic functions and format specifiers in C. 100 70 H\nget_next_line Read file or input content line by line with buffer management in C. 100 70 H\nBorn2beroot Introduction to system administration and virtualization with Linux. 125 40 H\nrank 2\npush_swap Sort a stack with a minimal set of operations using sorting algorithms in C. 84 60 H\nA-Maze-ing Generate and display a functional maze following specific constraints. 100 50 H\nPy Module 00 Introduction to Python programming through community garden scenarios. 100 9 H\nPy Module 01 Learn Object-Oriented Programming OOP through digital gardening exercises. 100 9 H\nPy Module 02 Master exception handling and data pipelines in agricultural systems. 100 9 H\nPy Module 03 Explore data structures and streaming pipelines through game analytics. 100 9 H\nPy Module 04 Master file operations and error handling in cyberpunk archiving missions. 100 9 H\nPy Module 05 Implement method overriding and polymorphism in cyberpunk data systems. 100 9 H\nPy Module 06 Master Python's import system and package control via laboratory projects. 100 9 H\nPy Module 07 Master abstract classes and interfaces by building a card game engine. 100 9 H\nPy Module 08 Master data engineering tools and environments in a Matrix-themed project. 100 9 H\nPy Module 10 Master advanced functional programming in a cyberpunk RPG scenario. 100 9 H\nPy Module 09 Master data validation with Pydantic through interstellar cosmic exercises. 100 9 H\nrank 3\nCall Me Maybe Implement LLM function calling and constrained JSON decoding. 105 80 H\nCodexion Master concurrent programming using threads and mutexes in C. 100 80 H\nFly-in Design a drone routing and pathfinding system using OOP principles. 125 120 H\nrank 4"
+  },
+  {
+    "file_path": "data/files/6946d33c7d7f4f8b93d3e7ea3ed55f17_transcript-42.pdf",
+    "first_character_index": 1904,
+    "last_character_index": 2710,
+    "content": "\nNetPractice Configure IP routing and subnetting to build functional network connections. 100 50 H\nRAG against the machine Build a RAG system with intelligent data chunking. 110 150 H\nPac-Man Develop a modern Python implementation of the classic Pac-Man game. 100 150 H\n*At 42, project grades are given on a scale from 0 to 100. A grade of 100 reflects full mastery of the project\u2019s objectives. \nExceptional submissions may receive a bonus, resulting in grades over 100. All evaluations are peer-reviewed and follow strict \nassessment criteria to ensure fairness and consistency.\nTRANSCRIPT OF ACADEMIC RECORDS\nDIOGO LU\u00cdS BOTELHO SILVA\nDate of birth:\nDate issued:\nPassed Selection in:\nCore Curriculum started on:\nCore Curriculum completed on:\n23.08.2006\n23.10.2026\n09.2025\n20.10.2025\nin progress\nPage 1 / 2"
+  },
+  {
+    "file_path": "data/files/6946d33c7d7f4f8b93d3e7ea3ed55f17_transcript-42.pdf",
+    "first_character_index": 2710,
+    "last_character_index": 4052,
+    "content": "\n\nDetails of the Curriculum\nFounded in 2013, 42 is a global network of ICT schools providing scalable, high-quality software engineering education. Our \ninnovative model emphasizes peer-to-peer learning, project-based and hands-on programming, enabling students to become \nindustry-ready within 2 to 5 years. The curriculum is divided into two parts: the Core Curriculum, after which students may \neither continue to the Advanced Curriculum or graduate as alumni.\nSkills developed during the entire Core Curriculum:\nAlgorithms & AI: Classic algorithms, data structures, and asynchronous logic.\nGraphics: Image manipulation, drawing shapes, and event-driven programming.\nGroup & Interpersonal: Teamwork, collaboration, and group dynamics.\nImperative Programming: C programming, memory management, and data structures.\nObject-Oriented Programming: C++ classes, inheritance, templates, and abstraction.\nSystem Programming: Unix system calls, file handling, and process control.\nNetwork & Sysadmin: Linux system setup, user management, and basic network services.\nWeb: Full-stack web development, MVC, and UI/UX basics.\nTRANSCRIPT OF ACADEMIC RECORDS\nDIOGO LU\u00cdS BOTELHO SILVA\nDate of birth:\nDate issued:\nPassed Selection in:\nCore Curriculum started on:\nCore Curriculum completed on:\n23.08.2006\n23.10.2026\n09.2025\n20.10.2025\nin progress\nPage 2 / 2"
+  },
+  {
     "file_path": "data/files/faq_lumio.txt",
     "first_character_index": 0,
     "last_character_index": 1312,

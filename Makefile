@@ -3,6 +3,7 @@ VENV = $(FOLDER)/.venv
 REQ = requirements.txt
 PY = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
+LUMIO_DATA = $(FOLDER)/lumio/data
 
 
 install:
@@ -25,6 +26,9 @@ backend-up:
 
 backend-down:
 		cd backend && docker compose up
+
+data:
+	mkdir -p $(LUMIO_DATA)
 
 app:
 	docker compose up -d

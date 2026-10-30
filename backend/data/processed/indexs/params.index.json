@@ -6,7 +6,7 @@
     "idf_method": "bm25l",
     "dtype": "float32",
     "int_dtype": "int32",
-    "num_docs": 4,
-    "version": "0.3.15",
+    "num_docs": 7,
+    "version": "0.3.16",
     "backend": "numpy"
 }

@@ -14,7 +14,17 @@ services:
       - "8000:8000"
     networks:
       - lumio
+    volumes:
+    - lumio_data:/app/data
 
 networks:
   lumio:
     driver: bridge
+
+volumes:
+  lumio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/backend/data
