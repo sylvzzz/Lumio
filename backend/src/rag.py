@@ -22,6 +22,7 @@ from .models import (
     StudentSearchResults,
     StudentSearchResultsAndAnswer,
     UnansweredQuestion,
+    AnsweredQuestion
 )
 from .qwen import Model
 
@@ -221,7 +222,7 @@ class RAG:
         report_recall(student_search_results_path, dataset_path)
 
     def answer(self, query: str, k: int,
-               history: List[dict[str, Any]] | None = None) -> str:
+               history: List[dict[str, Any]] | None = None) -> AnsweredQuestion:
         """Answer a single query from the retrieved sources.
 
         Args:
@@ -426,7 +427,7 @@ class RAG:
         """
         sources = result.retrieved_sources[:MAX_ANSWER_SOURCES]
         try:
-            text = engine.answer(result.question, sources)
+            text = engine.answer(result.question, sources).answer
         except RUNTIME_ERRORS as e:
             Logger.warning(f"Skipping one answer: {e}")
             text = "Unable to generate an answer."

@@ -124,7 +124,12 @@ class Model:
             temperature=0,
         )
         text = response.choices[0].message.content
-        return text.strip() if text else ""
+
+        from .models import AnsweredQuestion
+        result = AnsweredQuestion(question=question, sources=sources,
+                                  answer=text.strip() if text else "")
+
+        return result
 
 
 Qwen = Model

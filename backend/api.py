@@ -252,7 +252,9 @@ def send_chat_message(req: ChatMessageReq) -> dict:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        answer_text = rag.answer(query, k=5, history=history)
+        model_res = rag.answer(query, k=5, history=history)
+        answer = model_res.answer
+        sources = model_res.sources
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -269,12 +271,12 @@ def send_chat_message(req: ChatMessageReq) -> dict:
         "id": str(uuid.uuid4()),
         "session": req.session,
         "role": "assistant",
-        "content": answer_text,
-        "sources": [],
+        "content": answer,
+        "sources": sources,
         "created_at": now,
     }
     try:
-        append_exchange(req.session, {"role": "user", "content": query}, {"role": "assistant", "content": answer_text})
+        append_exchange(req.session, {"role": "user", "content": query}, {"role": "assistant", "content": answer})
     except Exception:
         pass
 
