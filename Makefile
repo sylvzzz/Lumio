@@ -27,7 +27,7 @@ backend-down:
 		cd backend && docker compose up
 
 app:
-	cd frontend; docker compose start; cd ../backend; docker compose start
+	docker compose up -d
 
 stop:
 	cd frontend; docker compose down; cd ../backend; docker compose down
