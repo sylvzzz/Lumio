@@ -2,7 +2,7 @@
 
 Your personal AI workspace: notes, documents, emails, and calendar in one place, with an intelligent RAG-powered assistant called Lumio.
 
-> **Note:** this is a personal project and is still in development. You're welcome to use it, test it, and, if you're interested, contribute by submitting a PR.
+> **Note:** this is a personal project and is still in development. You're welcome to use it, test it, and, if you're interested, contribute by submitting a PR. Lumio currently supports english and portuguese, but note that if you ask a question in a language that is not the language of the file (ex: Lumio whats the benefits for the intership at Cloudflare? - Document written in portuguse; Lumio will say he doesnt know but will probably suggest that file/a close answer, this happens because BM25 isnt flexible to text in Retrieval, so if you ask for X thing, BM25 will look only for X word, instead of looking for similar words. 
 
 Lumio brings your productivity apps together into one clean, Apple-inspired workspace. It centralizes your notes, documents, emails, and calendar, and pairs them with an AI assistant that answers questions, summarizes, and keeps you on top of your day.
 

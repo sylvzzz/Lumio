@@ -208,16 +208,38 @@ def get_chat_sessions() -> list[dict]:
 
 @app.post("/chat-sessions/")
 def create_chat_session(body: dict) -> dict:
+    import json
+    import os
+    import uuid
+    from datetime import datetime
+
+    os.makedirs("data", exist_ok=True)
+    db_path = "data/chats.json"
+
+    if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
+        db = []
+    else:
+        with open(db_path, "r", encoding="utf-8") as file:
+            db = json.load(file)
+
     chat_id = str(uuid.uuid4())
     title = body.get("title") or "New Chat"
     created_at = datetime.utcnow().isoformat() + "Z"
-    chat = {"id": chat_id, "title": title, "messages": [], "created_at": created_at, "updated_at": created_at}
-    from src.chat import _load_db, _save_db
 
-    db = _load_db()
+    chat = {
+        "id": chat_id,
+        "title": title,
+        "messages": [],
+        "created_at": created_at,
+        "updated_at": created_at
+    }
+
     db.append(chat)
-    _save_db(db)
-    return {"id": chat_id, "title": title, "messages": [], "created_at": created_at, "updated_at": created_at}
+
+    with open(db_path, "w", encoding="utf-8") as file:
+        json.dump(db, file, indent=2, ensure_ascii=False)
+
+    return chat
 
 
 @app.post("/chat-messages/")
