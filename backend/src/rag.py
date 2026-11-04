@@ -237,8 +237,13 @@ class RAG:
             FatalError: If search or answer generation fails.
         """
         if not query.strip():
+            from .models import AnsweredQuestion
             Logger.warning("Empty question; nothing to answer.")
-            return "Please provide a non-empty question."
+            return AnsweredQuestion(
+                question=query,
+                sources=[],
+                answer="Please provide a non-empty question."
+            )
         clean_k = self._clean_k(k)
         query = self._truncate_query(query)
 
