@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Send, Bot, User } from 'lucide-react'
+import { Send, Bot, User, FileText } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
+
+interface Source {
+  filename?: string
+  name?: string
+  source?: string
+  path?: string
+  [key: string]: unknown
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  sources?: Source[] | unknown[]
 }
 
 export function Lumio() {
@@ -63,6 +72,7 @@ export function Lumio() {
         id: data.ai_response?.id || Date.now().toString() + '-ai',
         role: 'assistant',
         content: data.ai_response?.content || data.content || '',
+        sources: data.ai_response?.sources || data.sources || [],
       }
       setMessages((prev) => [...prev, aiMsg])
     } catch (err) {
@@ -128,13 +138,37 @@ export function Lumio() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-accent text-white rounded-br-md'
-                      : 'bg-card border border-border rounded-bl-md'
+                  className={`max-w-[80%] ${
+                    msg.role === 'user' ? 'text-right' : ''
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <div
+                    className={`px-4 py-3 rounded-2xl ${
+                      msg.role === 'user'
+                        ? 'bg-accent text-white rounded-br-md'
+                        : 'bg-card border border-border rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                  {msg.role === 'assistant' && Array.isArray(msg.sources) && msg.sources.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {msg.sources.map((source, idx) => {
+                        const src = source as Source
+                        const label =
+                          src.filename || src.name || src.source || src.path || `Fonte ${idx + 1}`
+                        return (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-muted/50 border border-border/50 text-muted-foreground"
+                          >
+                            <FileText className="w-3 h-3" />
+                            <span className="truncate max-w-[200px]">{String(label)}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
                 {msg.role === 'user' && (
                   <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">

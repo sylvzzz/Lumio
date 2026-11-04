@@ -30,8 +30,11 @@ backend-down:
 data:
 	mkdir -p $(LUMIO_DATA)
 
-app: data
-	docker compose up -d
+clean_data:
+	sudo rm -rf $(LUMIO_DATA)
+
+app:
+	mkdir -p $(LUMIO_DATA); docker compose up -d
 
 stop:
 	cd frontend; docker compose down; cd ../backend; docker compose down
