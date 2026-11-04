@@ -27,4 +27,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${PWD}/backend/data
+      device: ${PWD}/lumio/data

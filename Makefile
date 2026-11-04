@@ -30,7 +30,7 @@ backend-down:
 data:
 	mkdir -p $(LUMIO_DATA)
 
-app:
+app: data
 	docker compose up -d
 
 stop:
