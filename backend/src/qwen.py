@@ -22,8 +22,13 @@ SYSTEM_PROMPT = (
     "sources when they are relevant. Use the conversation history to "
     "understand follow-up questions. If the sources do not contain the "
     "answer, say you do not know instead of making it up. You may reply "
-    "normally to greetings and small talk. Be concise."
-    "Answer in the same language as the user prompt"
+    "normally to greetings and small talk. Be concise. "
+    "Answer directly, starting with the content itself. Never mention "
+    "source file names, titles, or paths in your reply, and never say "
+    "'based on the document', 'according to the file', or similar phrases. "
+    "Only say which file was used if the user explicitly asks which "
+    "source you used. "
+    "Answer in the same language as the user prompt."
 )
 
 
@@ -96,8 +101,10 @@ class Model:
             total += len(block)
         return "\n\n".join(blocks)
 
-    def answer(self, question: str, sources: List[MinimalSource],
-               history: List[dict[str, Any]] | None = None) -> str:
+    def _messages(self, question: str, sources: List[MinimalSource],
+                  history: List[dict[str, Any]] | None
+                  ) -> list[ChatCompletionMessageParam]:
+        """Build the chat messages sent to the model."""
         user = (
             f"Sources:\n{self.format_sources(sources)}\n\n"
             f"Question: {question}"
@@ -118,9 +125,13 @@ class Model:
                     {"role": "assistant", "content": content}
                 )
         messages.append({"role": "user", "content": user})
+        return messages
+
+    def answer(self, question: str, sources: List[MinimalSource],
+               history: List[dict[str, Any]] | None = None) -> str:
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=messages,
+            messages=self._messages(question, sources, history),
             temperature=0,
         )
         text = response.choices[0].message.content
@@ -130,6 +141,22 @@ class Model:
                                   answer=text.strip() if text else "")
 
         return result
+
+    def answer_stream(self, question: str, sources: List[MinimalSource],
+                      history: List[dict[str, Any]] | None = None):
+        """Yield the answer text as the model produces it."""
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=self._messages(question, sources, history),
+            temperature=0,
+            stream=True,
+        )
+        for chunk in response:
+            if not chunk.choices:
+                continue
+            text = chunk.choices[0].delta.content
+            if text:
+                yield text
 
 
 Qwen = Model

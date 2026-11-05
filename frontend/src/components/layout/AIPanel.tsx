@@ -4,6 +4,9 @@ import { Bot, Send, Plus, X } from 'lucide-react'
 import { useChatComposer } from '@/hooks/use-chat-composer'
 import { useAIPanelStore } from '@/store/ai-panel'
 import { Markdown } from '@/components/Markdown'
+import { SourceRows } from '@/components/SourceRows'
+import { sourceFiles } from '@/lib/sources'
+import { TypingDots } from '@/components/TypingDots'
 import { useUser } from '@/hooks/useUser'
 
 function getText(lang: string) {
@@ -28,10 +31,22 @@ export function AIPanel() {
   const closePanel = useAIPanelStore((s) => s.closePanel)
   const { input, setInput, sending, messages, isLoading, currentSession, handleSend, handleNewChat } = useChatComposer()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrollRef = useRef(true)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, sending])
+    if (!autoScrollRef.current) return
+    messagesEndRef.current?.scrollIntoView({
+      behavior: shouldReduceMotion ? 'auto' : 'smooth',
+      block: 'end',
+    })
+  }, [messages, sending, shouldReduceMotion])
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
 
   const startResize = (e: React.PointerEvent) => {
     e.preventDefault()
@@ -107,7 +122,7 @@ export function AIPanel() {
         </div>
       </motion.div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
         {!currentSession && !isLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <Bot className="w-8 h-8 text-accent/30 mb-3" strokeWidth={1} />
@@ -116,7 +131,9 @@ export function AIPanel() {
         )}
 
         <AnimatePresence mode="popLayout">
-          {messages.map((msg) => (
+          {messages.map((msg) => {
+            const files = msg.role === 'assistant' ? sourceFiles(msg) : []
+            return (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 10, scale: 0.97 }}
@@ -136,13 +153,21 @@ export function AIPanel() {
                     : 'bg-card border border-border/50 text-foreground rounded-bl-md shadow-sm'
                 }`}
               >
-                <Markdown>{msg.content}</Markdown>
+                {msg.role === 'assistant' && files.length > 0 && (
+                  <SourceRows files={files} animate={!!msg.streaming} />
+                )}
+                {msg.role === 'assistant' && msg.streaming && !msg.content ? (
+                  <TypingDots reduceMotion={!!shouldReduceMotion} />
+                ) : (
+                  <Markdown streaming={!!msg.streaming}>{msg.content}</Markdown>
+                )}
               </div>
             </motion.div>
-          ))}
+            )
+          })}
         </AnimatePresence>
 
-        {sending && (
+        {sending && !messages.some((m) => m.streaming) && (
           <motion.div
             className="flex justify-start"
             initial={{ opacity: 0, y: 10 }}
@@ -150,21 +175,7 @@ export function AIPanel() {
             exit={{ opacity: 0 }}
           >
             <div className="bg-card border border-border/50 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
-              <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
-                  <motion.div
-                    key={i}
-                    className="w-2 h-2 rounded-full bg-muted-foreground/40"
-                    animate={shouldReduceMotion ? {} : { y: [0, -4, 0] }}
-                    transition={shouldReduceMotion ? {} : {
-                      duration: 0.6,
-                      repeat: Infinity,
-                      delay: i * 0.15,
-                      ease: 'easeInOut',
-                    }}
-                  />
-                ))}
-              </div>
+              <TypingDots reduceMotion={!!shouldReduceMotion} />
             </div>
           </motion.div>
         )}

@@ -8,11 +8,11 @@ from typing import Any, Optional
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from src.chunking import FILES_DIR
-from src.chat import append_exchange, get_chat, list_chats
+from src.chat import append_exchange, create_chat, get_chat, list_chats
 from src.logger import FatalError
 from src.rag import RAG
 
@@ -191,14 +191,20 @@ def root() -> dict[str, str]:
 
 @app.get("/chat-sessions/")
 def get_chat_sessions() -> list[dict]:
-    sessions = list_chats()
     result = []
-    for s in sessions:
+    for s in list_chats():
+        chat_id = s.get("chat_id")
+        if not chat_id:
+            continue
+        history = (get_chat(chat_id) or {}).get("messages", [])
         result.append(
             {
-                "id": s.get("id"),
+                "id": chat_id,
                 "title": s.get("title") or "New Chat",
-                "messages": s.get("messages", []),
+                "messages": [
+                    {**m, "id": m.get("id") or f"{chat_id}-{i}", "session": chat_id}
+                    for i, m in enumerate(history)
+                ],
                 "created_at": s.get("created_at"),
                 "updated_at": s.get("updated_at") or s.get("created_at"),
             }
@@ -208,38 +214,8 @@ def get_chat_sessions() -> list[dict]:
 
 @app.post("/chat-sessions/")
 def create_chat_session(body: dict) -> dict:
-    import json
-    import os
-    import uuid
-    from datetime import datetime
-
-    os.makedirs("data", exist_ok=True)
-    db_path = "data/chats.json"
-
-    if not os.path.exists(db_path) or os.path.getsize(db_path) == 0:
-        db = []
-    else:
-        with open(db_path, "r", encoding="utf-8") as file:
-            db = json.load(file)
-
-    chat_id = str(uuid.uuid4())
-    title = body.get("title") or "New Chat"
-    created_at = datetime.utcnow().isoformat() + "Z"
-
-    chat = {
-        "id": chat_id,
-        "title": title,
-        "messages": [],
-        "created_at": created_at,
-        "updated_at": created_at
-    }
-
-    db.append(chat)
-
-    with open(db_path, "w", encoding="utf-8") as file:
-        json.dump(db, file, indent=2, ensure_ascii=False)
-
-    return chat
+    chat = create_chat(body.get("title") or "New Chat")
+    return {**chat, "id": chat["chat_id"]}
 
 
 @app.post("/chat-messages/")
@@ -281,6 +257,88 @@ def send_chat_message(req: ChatMessageReq) -> dict:
         pass
 
     return {**user_msg, "ai_response": ai_msg}
+
+
+def _sse(event: str, data: dict) -> str:
+    payload = json.dumps(data, ensure_ascii=False)
+    return f"event: {event}\ndata: {payload}\n\n"
+
+
+def _source_files(sources: list) -> list[dict[str, str]]:
+    files = []
+    seen = set()
+    for source in sources:
+        path = getattr(source, "file_path", "")
+        name = Path(path).name
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        files.append({"document_id": name, "name": _original_name(name)})
+    return files
+
+
+@app.post("/chat-messages/stream/")
+def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
+    query = req.content
+    history = []
+    chat = get_chat(req.session)
+    if chat:
+        for m in chat.get("messages", [])[-10:]:
+            history.append({"role": m.get("role"), "content": m.get("content", "")})
+
+    try:
+        sources, tokens = rag.stream_answer(query, k=5, history=history)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    files = _source_files(sources)
+
+    def generate():
+        yield _sse("sources", {"files": files})
+        parts = []
+        try:
+            for delta in tokens:
+                parts.append(delta)
+                yield _sse("delta", {"text": delta})
+        except Exception as e:
+            yield _sse("error", {"message": str(e)})
+            return
+
+        answer = "".join(parts).strip()
+        now = datetime.utcnow().isoformat() + "Z"
+        user_msg = {
+            "id": str(uuid.uuid4()),
+            "session": req.session,
+            "role": "user",
+            "content": query,
+            "sources": [],
+            "created_at": now,
+        }
+        ai_msg = {
+            "id": str(uuid.uuid4()),
+            "session": req.session,
+            "role": "assistant",
+            "content": answer,
+            "sources": [s.model_dump() for s in sources],
+            "created_at": now,
+        }
+        try:
+            append_exchange(
+                req.session, query, answer,
+                sources=[s.model_dump() for s in sources],
+            )
+        except Exception:
+            pass
+        yield _sse("done", {"user": user_msg, "ai_response": ai_msg})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/notes/")

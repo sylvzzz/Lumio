@@ -104,6 +104,18 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface SourceFile {
+  document_id: string
+  name: string
+}
+
+export interface ChatStreamHandlers {
+  onSources?: (files: SourceFile[]) => void
+  onDelta?: (text: string) => void
+  onDone?: (response: { user: ChatMessage; ai_response: ChatMessage }) => void
+  onError?: (error: Error) => void
+}
+
 export interface ChatSendResponse {
   id: string
   session: string
@@ -172,5 +184,50 @@ export const api = {
     sessions: () => fetchJSON<ChatSession[]>('/chat-sessions/'),
     createSession: (title?: string) => mutate<ChatSession>('/chat-sessions/', 'POST', { title: title || 'New Chat' }),
     sendMessage: (session: string, content: string, timezone?: string) => mutate<ChatSendResponse>('/chat-messages/', 'POST', { session, content, role: 'user', timezone }),
+    streamMessage: async (
+      session: string,
+      content: string,
+      timezone: string | undefined,
+      handlers: ChatStreamHandlers,
+    ) => {
+      const res = await fetch(`${API_BASE}/chat-messages/stream/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session, content, role: 'user', timezone }),
+      })
+      if (!res.ok || !res.body) throw new Error(`API error: ${res.status}`)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      const dispatch = (raw: string) => {
+        let event = 'message'
+        const dataLines: string[] = []
+        for (const line of raw.split('\n')) {
+          if (line.startsWith('event:')) event = line.slice(6).trim()
+          else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart())
+        }
+        if (dataLines.length === 0) return
+        const data = JSON.parse(dataLines.join('\n'))
+        if (event === 'sources') handlers.onSources?.(data.files ?? [])
+        else if (event === 'delta') handlers.onDelta?.(data.text ?? '')
+        else if (event === 'done') handlers.onDone?.(data)
+        else if (event === 'error') handlers.onError?.(new Error(data.message ?? 'Stream failed'))
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let boundary = buffer.indexOf('\n\n')
+        while (boundary >= 0) {
+          const raw = buffer.slice(0, boundary)
+          buffer = buffer.slice(boundary + 2)
+          if (raw.trim()) dispatch(raw)
+          boundary = buffer.indexOf('\n\n')
+        }
+      }
+    },
   },
 }

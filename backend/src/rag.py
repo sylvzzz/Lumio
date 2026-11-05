@@ -39,6 +39,13 @@ NUMBER_ERRORS = (TypeError, ValueError, OverflowError)
 CV_QUERY = re.compile(
     r"\b(?:curr[íi]culo|curriculum|resume)\b", re.IGNORECASE
 )
+STOPWORDS = frozenset(
+    "a à às ao aos as com da das de do dos e é em entre era essa esse esta "
+    "este eu foi há isso isto já mais mas me mesmo meu meus minha minhas na "
+    "nas no nos o os ou para pela pelo por qual quais quando que quem se sem "
+    "ser seu seus sua suas um uma umas uns onde como porque the and of to is "
+    "are my me i you what which where how".split()
+)
 
 
 class RAG:
@@ -164,6 +171,11 @@ class RAG:
         try:
             bm25 = self._load_index()
             search_query = CV_QUERY.sub("cv", query)
+            search_query = " ".join(
+                word
+                for word in re.findall(r"\w+", search_query)
+                if word.lower() not in STOPWORDS
+            ) or search_query
             query_tokens = bm25s.tokenize(search_query, show_progress=False)
             indices, scores = bm25.retrieve(
                 query_tokens, k=k, show_progress=False
@@ -259,6 +271,32 @@ class RAG:
         except RUNTIME_ERRORS as e:
             Logger.error(f"Answer generation failed: {e}")
             raise FatalError from e
+
+    def stream_answer(self, query: str, k: int,
+                      history: List[dict[str, Any]] | None = None):
+        """Return the retrieved sources and a streaming answer iterator.
+
+        Args:
+            query: Question to answer.
+            k: Maximum number of sources to retrieve.
+            history: Previous chat messages used as conversation context.
+
+        Returns:
+            A tuple of sources and the model's text iterator.
+
+        Raises:
+            FatalError: If the answer engine cannot be loaded.
+        """
+        clean_k = self._clean_k(k)
+        query = self._truncate_query(query)
+        try:
+            sources = self.search(query, clean_k).retrieved_sources
+        except (FatalError, *RUNTIME_ERRORS):
+            Logger.warning("Search unavailable; answering without sources.")
+            sources = []
+        sources = sources[:MAX_ANSWER_SOURCES]
+        engine = self._load_engine()
+        return sources, engine.answer_stream(query, sources, history)
 
     def get_sources_info(self, query: str, k: int) -> list[dict[str, Any]]:
         """Return information about retrieved files for display."""

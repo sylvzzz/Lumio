@@ -214,3 +214,48 @@ html [data-sonner-toast][data-styled='true'] [data-description] {
   font-size: 12px;
   line-height: 1.4;
 }
+
+/* Streaming answer reveal */
+@keyframes stream-word-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.streaming .stream-word {
+  animation: stream-word-in 420ms var(--ease-out-strong) both;
+}
+
+.stream-cursor {
+  display: inline-block;
+  width: 0.38em;
+  height: 0.38em;
+  margin-left: 0.18em;
+  border-radius: 9999px;
+  background: var(--accent);
+  vertical-align: middle;
+  animation: stream-cursor-pulse 1s ease-in-out infinite;
+}
+
+@keyframes stream-cursor-pulse {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming .stream-word,
+  .stream-cursor {
+    animation: none;
+  }
+}

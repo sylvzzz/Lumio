@@ -84,6 +84,31 @@ def delete_chat(chat_id: str) -> None:
         _write(data)
 
 
+def create_chat(title: str = "New Chat") -> dict[str, Any]:
+    """Create an empty chat and return it."""
+    with _lock:
+        data = _read()
+        now = _now()
+        chat = {
+            "chat_id": str(uuid.uuid4()),
+            "title": title,
+            "created_at": now,
+            "updated_at": now,
+        }
+        chats = data.get("chats")
+        messages = data.get("messages")
+        if not isinstance(chats, list):
+            chats = []
+            data["chats"] = chats
+        if not isinstance(messages, dict):
+            messages = {}
+            data["messages"] = messages
+        chats.append(chat)
+        messages[chat["chat_id"]] = []
+        _write(data)
+    return {**chat, "messages": []}
+
+
 def append_exchange(chat_id: str | None, prompt: str, answer: str, sources: list | None = None) -> str:
     """Append a user/assistant exchange and return the chat id."""
     with _lock:

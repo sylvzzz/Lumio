@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
+import { api, type SourceFile } from '@/lib/api'
 import { useChatSessions } from '@/hooks/use-chat'
 
 export interface LocalMessage {
@@ -11,6 +11,28 @@ export interface LocalMessage {
   sources: unknown[]
   created_at: string
   optimistic?: boolean
+  files?: SourceFile[]
+  streaming?: boolean
+}
+
+interface StreamState {
+  id: string
+  buffer: string
+  display: string
+  timer: number | null
+  gateUntil: number
+  done: boolean
+  final: LocalMessage | null
+}
+
+function nextDelay(): number {
+  return 45 + Math.random() * 45
+}
+
+function takePiece(text: string): string {
+  const words = text.length > 240 ? 4 : text.length > 100 ? 2 : 1
+  const match = text.match(new RegExp(`^(?:\\s*\\S+){1,${words}}\\s*`))
+  return match ? match[0] : text
 }
 
 export function useChatComposer() {
@@ -19,6 +41,7 @@ export function useChatComposer() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([])
+  const streamRef = useRef<StreamState | null>(null)
 
   const currentSession = sessions?.[0]
   const serverMessages: LocalMessage[] = useMemo(
@@ -31,8 +54,16 @@ export function useChatComposer() {
     [localMessages, serverMessages],
   )
 
+  useEffect(() => () => {
+    const state = streamRef.current
+    if (state?.timer !== null && state?.timer !== undefined) {
+      window.clearTimeout(state.timer)
+    }
+    streamRef.current = null
+  }, [])
+
   const ensureSession = useCallback(async () => {
-    if (currentSession) return currentSession
+    if (currentSession?.id) return currentSession
     const session = await api.chat.createSession()
     queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
     return session
@@ -57,42 +88,163 @@ export function useChatComposer() {
 
     setLocalMessages((prev) => [...(prev.length > 0 ? prev : serverMessages), optimisticMsg])
 
+    let state: StreamState | null = null
+
+    const ensureState = (sessionId: string): StreamState => {
+      if (state) return state
+      const created: StreamState = {
+        id: `stream-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        buffer: '',
+        display: '',
+        timer: null,
+        gateUntil: 0,
+        done: false,
+        final: null,
+      }
+      state = created
+      streamRef.current = created
+      setLocalMessages((prev) => [
+        ...prev,
+        {
+          id: created.id,
+          session: sessionId,
+          role: 'assistant',
+          content: '',
+          sources: [],
+          files: [],
+          created_at: new Date().toISOString(),
+          streaming: true,
+        },
+      ])
+      return created
+    }
+
+    const finish = () => {
+      if (!state) return
+      const current = state
+      if (current.timer !== null) {
+        window.clearTimeout(current.timer)
+        current.timer = null
+      }
+      setLocalMessages((prev) =>
+        prev.map((m) =>
+          m.id === current.id
+            ? {
+                ...m,
+                content: current.final?.content ?? current.display,
+                sources: current.final?.sources ?? m.sources,
+                streaming: false,
+              }
+            : m,
+        ),
+      )
+      if (streamRef.current === current) streamRef.current = null
+      setSending(false)
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
+    }
+
+    const tick = () => {
+      if (!state || streamRef.current !== state) return
+      const current = state
+      current.timer = null
+      const now = Date.now()
+      if (now < current.gateUntil) {
+        current.timer = window.setTimeout(tick, current.gateUntil - now + nextDelay())
+        return
+      }
+      if (!current.buffer) {
+        if (current.done) finish()
+        return
+      }
+      const piece = takePiece(current.buffer)
+      current.buffer = current.buffer.slice(piece.length)
+      current.display += piece
+      const display = current.display
+      setLocalMessages((prev) =>
+        prev.map((m) => (m.id === current.id ? { ...m, content: display } : m)),
+      )
+      current.timer = window.setTimeout(tick, nextDelay())
+    }
+
+    const schedule = () => {
+      if (!state || state.timer !== null) return
+      state.timer = window.setTimeout(tick, 0)
+    }
+
     try {
       const session = await ensureSession()
-      const res = await api.chat.sendMessage(session.id, text, Intl.DateTimeFormat().resolvedOptions().timeZone)
-
-      setLocalMessages((prev) => {
-        const base = prev.filter((m) => m.id !== tempId)
-        const userMsg: LocalMessage = {
-          id: res.id,
-          session: res.session,
-          role: 'user',
-          content: res.content,
-          sources: res.sources,
-          created_at: res.created_at,
-        }
-        const msgs = [...base, userMsg]
-        if (res.ai_response) {
-          msgs.push({
-            id: res.ai_response.id,
-            session: res.ai_response.session,
-            role: 'assistant',
-            content: res.ai_response.content,
-            sources: res.ai_response.sources,
-            created_at: res.ai_response.created_at,
-          })
-        }
-        return msgs
-      })
-
-      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
+      ensureState(session.id)
+      await api.chat.streamMessage(
+        session.id,
+        text,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        {
+          onSources: (files) => {
+            const current = ensureState(session.id)
+            current.gateUntil = Date.now() + Math.min(1400, files.length * 320 + 280)
+            setLocalMessages((prev) =>
+              prev.map((m) => (m.id === current.id ? { ...m, files } : m)),
+            )
+          },
+          onDelta: (delta) => {
+            const current = ensureState(session.id)
+            current.buffer += delta
+            schedule()
+          },
+          onDone: (response) => {
+            const current = ensureState(session.id)
+            current.final = response.ai_response as LocalMessage
+            current.done = true
+            if (!current.buffer) finish()
+            else schedule()
+          },
+          onError: (error) => {
+            const current = ensureState(session.id)
+            current.final = {
+              ...(current.final ?? {
+                id: current.id,
+                session: session.id,
+                role: 'assistant',
+                content: '',
+                sources: [],
+                created_at: new Date().toISOString(),
+              }),
+              content: current.display || `Sorry, ${error.message}`,
+            }
+            current.done = true
+            current.buffer = ''
+            finish()
+          },
+        },
+      )
     } catch (e) {
       console.error('Failed to send message', e)
+      const current = state as StreamState | null
+      if (current) {
+        current.final = {
+          id: current.id,
+          session: currentSession?.id || '',
+          role: 'assistant',
+          content: current.display || "Sorry, I couldn't complete that answer.",
+          sources: [],
+          created_at: new Date().toISOString(),
+        }
+        current.done = true
+        current.buffer = ''
+        finish()
+      } else {
+        setSending(false)
+      }
     }
-    setSending(false)
   }, [input, sending, currentSession, serverMessages, ensureSession, queryClient])
 
   const handleNewChat = useCallback(async () => {
+    const state = streamRef.current
+    if (state?.timer !== null && state?.timer !== undefined) {
+      window.clearTimeout(state.timer)
+    }
+    streamRef.current = null
+    setSending(false)
     await api.chat.createSession()
     setLocalMessages([])
     queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })

@@ -1,0 +1,31 @@
+Perguntas Frequentes (FAQ)
+
+1. O que é o Lumio?
+   O Lumio é um workspace pessoal com IA que centraliza notas, documentos, emails, calendário e tarefas, com um assistente que responde com base no teu conteúdo.
+
+2. Preciso de internet para usar?
+   Precisas de internet para o chat com IA (usa API do Groq). As notas, documentos e calendário ficam guardados localmente.
+
+3. Que formatos de ficheiro são suportados?
+   PDF, DOCX, TXT e MD.
+
+4. O Lumio guarda os meus dados onde?
+   Tudo fica guardado localmente na pasta data/ do backend (notas, calendário, tarefas, documentos e histórico de chat).
+
+5. Como funciona o assistente?
+   Ao fazer perguntas, o Lumio pesquisa o teu conteúdo indexado e usa-o para dar respostas contextualizadas.
+
+6. Posso apagar documentos?
+   Sim, podes apagar documentos na secção Documentos. Ao apagar, são removidos também do índice.
+
+7. As notas aparecem nas respostas do chat?
+   Sim. Notas e eventos criados são automaticamente sincronizados e indexados para o assistente poder usá-los.
+
+8. Como altero o tema?
+   Usa o botão de sol/lua no cabeçalho para alternar entre modo claro e escuro.
+
+9. O que acontece se não tiver API key?
+   O chat com IA não funciona sem LLM_API_KEY configurada no backend/.env, mas podes continuar a usar notas, documentos e calendário normalmente.
+
+10. Posso usar em modo single-user?
+   Sim, esta versão foi adaptada para uso local single-user.

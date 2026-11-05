@@ -1,99 +1,51 @@
-import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Send, Bot, User, FileText } from 'lucide-react'
+import { useRef, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Send, Bot, User } from 'lucide-react'
 import { useUser } from '@/hooks/useUser'
-
-interface Source {
-  filename?: string
-  name?: string
-  source?: string
-  path?: string
-  [key: string]: unknown
-}
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  sources?: Source[] | unknown[]
-}
+import { useChatComposer } from '@/hooks/use-chat-composer'
+import { Markdown } from '@/components/Markdown'
+import { SourceRows } from '@/components/SourceRows'
+import { sourceFiles } from '@/lib/sources'
+import { TypingDots } from '@/components/TypingDots'
 
 export function Lumio() {
   const { user } = useUser()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const reduceMotion = useReducedMotion()
+  const { input, setInput, sending, messages, handleSend } = useChatComposer()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const autoScrollRef = useRef(true)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const createSession = async () => {
-    const res = await fetch('/api/chat-sessions/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Chat Lumio' }),
+    if (!autoScrollRef.current) return
+    messagesEndRef.current?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'end',
     })
-    const data = await res.json()
-    setSessionId(data.id)
-    return data.id
+  }, [messages, sending, reduceMotion])
+
+  useEffect(() => {
+    if (!sending) inputRef.current?.focus()
+  }, [sending])
+
+  const handleScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
   }
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const sendMessage = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || loading) return
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-    }
-    setMessages((prev) => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
-
-    try {
-      let sid = sessionId
-      if (!sid) {
-        sid = await createSession()
-      }
-
-      const res = await fetch('/api/chat-messages/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session: sid, content: userMsg.content, role: 'user' }),
-      })
-      const data = await res.json()
-
-      const aiMsg: Message = {
-        id: data.ai_response?.id || Date.now().toString() + '-ai',
-        role: 'assistant',
-        content: data.ai_response?.content || data.content || '',
-        sources: data.ai_response?.sources || data.sources || [],
-      }
-      setMessages((prev) => [...prev, aiMsg])
-    } catch (err) {
-      console.error(err)
-      const errorMsg: Message = {
-        id: Date.now().toString() + '-err',
-        role: 'assistant',
-        content: 'Ocorreu um erro ao processar a mensagem.',
-      }
-      setMessages((prev) => [...prev, errorMsg])
-    } finally {
-      setLoading(false)
-      inputRef.current?.focus()
-    }
+    handleSend()
   }
 
   const displayName = user?.name?.trim() || ''
+  const waiting = sending && !messages.some((m) => m.streaming)
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col -mx-10 -my-8">
-      <div className="flex-1 overflow-y-auto px-4 py-8">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-8">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center space-y-4 max-w-2xl">
@@ -125,69 +77,57 @@ export function Lumio() {
           </div>
         ) : (
           <div className="max-w-3xl mx-auto space-y-6">
-            {messages.map((msg) => (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-[80%] ${
-                    msg.role === 'user' ? 'text-right' : ''
-                  }`}
+            {messages.map((msg) => {
+              const files = msg.role === 'assistant' ? sourceFiles(msg) : []
+              return (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`px-4 py-3 rounded-2xl ${
-                      msg.role === 'user'
-                        ? 'bg-accent text-white rounded-br-md'
-                        : 'bg-card border border-border rounded-bl-md'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                  {msg.role === 'assistant' && Array.isArray(msg.sources) && msg.sources.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {msg.sources.map((source, idx) => {
-                        const src = source as Source
-                        const label =
-                          src.filename || src.name || src.source || src.path || `Fonte ${idx + 1}`
-                        return (
-                          <div
-                            key={idx}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg bg-muted/50 border border-border/50 text-muted-foreground"
-                          >
-                            <FileText className="w-3 h-3" />
-                            <span className="truncate max-w-[200px]">{String(label)}</span>
-                          </div>
-                        )
-                      })}
+                  {msg.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-white" />
                     </div>
                   )}
-                </div>
-                {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-accent" />
+                  <div
+                    className={`max-w-[80%] ${
+                      msg.role === 'user' ? 'text-right' : ''
+                    }`}
+                  >
+                    <div
+                      className={`px-4 py-3 rounded-2xl ${
+                        msg.role === 'user'
+                          ? 'bg-accent text-white rounded-br-md'
+                          : 'bg-card border border-border rounded-bl-md'
+                      }`}
+                    >
+                      {msg.role === 'assistant' && files.length > 0 && (
+                        <SourceRows files={files} animate={!!msg.streaming} />
+                      )}
+                      {msg.role === 'assistant' && msg.streaming && !msg.content ? (
+                        <TypingDots reduceMotion={!!reduceMotion} />
+                      ) : (
+                        <Markdown streaming={!!msg.streaming}>{msg.content}</Markdown>
+                      )}
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            ))}
-            {loading && (
+                  {msg.role === 'user' && (
+                    <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-accent" />
+                    </div>
+                  )}
+                </motion.div>
+              )
+            })}
+            {waiting && (
               <div className="flex gap-4">
                 <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-bl-md">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
+                  <TypingDots reduceMotion={!!reduceMotion} />
                 </div>
               </div>
             )}
@@ -204,12 +144,12 @@ export function Lumio() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Escreve a tua mensagem..."
-            disabled={loading}
+            disabled={sending}
             className="flex-1 h-11 px-4 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={!input.trim() || loading}
+            disabled={!input.trim() || sending}
             className="w-11 h-11 bg-accent text-white rounded-xl flex items-center justify-center hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Send className="w-4 h-4" />
