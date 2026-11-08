@@ -13,3 +13,7 @@ docs
 .opencode
 opencode.json
 lumio
+credentials.json
+.terraform.lock.hcl
+.terraform
+terraform.tfstate
