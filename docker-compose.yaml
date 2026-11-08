@@ -16,6 +16,14 @@ services:
       - lumio
     volumes:
       - ./lumio/data:/app/data
+  nginx:
+    build: ./nginx
+    depends_on:
+      - frontend
+    ports:
+      - "443:443"
+    networks:
+      - lumio
 
 networks:
   lumio:
