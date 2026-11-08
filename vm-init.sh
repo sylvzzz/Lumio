@@ -6,6 +6,10 @@ sudo apt update
 
 # Instalar UFW
 sudo apt install -y ufw
+sudo ufw allow 443
+
+# Instalar Make
+sudo apt install -y make
 
 # Instalar dependências Docker
 sudo apt install -y ca-certificates curl
