@@ -16,4 +16,4 @@ lumio
 credentials.json
 .terraform.lock.hcl
 .terraform
-terraform.tfstate
+terraform.tfstate*

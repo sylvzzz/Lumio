@@ -14,8 +14,10 @@ resource "google_compute_instance" "lumio" {
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-12"
-    }
+    image = "debian-cloud/debian-12"
+    size  = 25
+    type  = "pd-balanced"
+  }
   }
 
   network_interface {
