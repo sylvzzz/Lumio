@@ -13,7 +13,11 @@ import {
   HelpCircle,
 } from 'lucide-react'
 
-export function Sidebar() {
+interface SidebarContentProps {
+  onNavigate?: () => void
+}
+
+export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const shouldReduceMotion = useReducedMotion()
   const { user } = useUser()
   const language = user.language ?? 'pt'
@@ -31,7 +35,7 @@ export function Sidebar() {
   ]
 
   return (
-    <aside className="w-[260px] h-full flex flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">
+    <>
       <div className="px-5 pt-7 pb-6">
         <motion.div
           className="flex items-center gap-2.5"
@@ -49,7 +53,7 @@ export function Sidebar() {
         </motion.div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto overscroll-contain px-3 space-y-1" aria-label="Main">
         {navItems.map((item, i) => (
           <motion.div
             key={item.to}
@@ -60,8 +64,9 @@ export function Sidebar() {
             <NavLink
               to={item.to}
               end={item.to === '/'}
+              onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] transition-all duration-200 ${
+                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-xl text-[13px] transition-all duration-200 ${
                   isActive
                     ? 'bg-accent/10 text-accent font-medium shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent/5'
@@ -75,9 +80,17 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4">
+      <div className="p-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] lg:pb-4">
         <div className="text-[11px] text-muted-foreground/60 px-2">Lumio · Local</div>
       </div>
+    </>
+  )
+}
+
+export function Sidebar() {
+  return (
+    <aside className="hidden lg:flex w-[260px] h-full flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">
+      <SidebarContent />
     </aside>
   )
 }

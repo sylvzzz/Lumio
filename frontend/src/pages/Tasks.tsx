@@ -79,8 +79,8 @@ export function Tasks() {
 
   return (
     <div className="max-w-3xl mx-auto animate-fade-in">
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-1">Tasks</h1>
-      <p className="text-muted-foreground text-sm mb-8">Keep track of what matters.</p>
+      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground mb-1">Tasks</h1>
+      <p className="text-muted-foreground text-sm mb-6 sm:mb-8">Keep track of what matters.</p>
 
       {isLoading ? (
         <div className="bg-card/50 rounded-2xl border border-border/20 p-6 animate-pulse">
@@ -96,7 +96,7 @@ export function Tasks() {
         </div>
       ) : (
         <div className="bg-card rounded-2xl border border-border/30 shadow-sm">
-          <div className="p-6 pb-0 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="p-4 sm:p-6 pb-0 flex flex-col gap-4 sm:gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2.5">
               <CheckSquare className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
               <h2 className="text-[15px] font-semibold tracking-tight">Your tasks</h2>
@@ -107,7 +107,7 @@ export function Tasks() {
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   className={cn(
-                    'px-3.5 py-1 rounded-lg text-[12px] font-medium transition-colors',
+                    'px-3.5 py-2 min-h-11 sm:min-h-0 sm:py-1 rounded-lg text-[12px] font-medium transition-colors',
                     filter === f.key
                       ? 'bg-card shadow-sm text-foreground'
                       : 'text-muted-foreground hover:text-foreground',
@@ -122,19 +122,19 @@ export function Tasks() {
             </div>
           </div>
 
-          <div className="p-6 pb-4">
+          <div className="p-4 sm:p-6 pb-4">
             <div className="flex items-center gap-2">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Add a task..."
-                className="flex-1 bg-secondary/50 rounded-xl border border-border/50 px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+                className="flex-1 min-w-0 bg-secondary/50 rounded-xl border border-border/50 px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
               />
               <motion.button
                 onClick={addTask}
                 disabled={adding || !input.trim()}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2.5 min-h-11 sm:min-h-0 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 disabled:opacity-50 transition-colors shrink-0"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
               >
@@ -144,7 +144,7 @@ export function Tasks() {
             </div>
           </div>
 
-          <div className="px-6 pb-2">
+          <div className="px-4 sm:px-6 pb-2">
             <div className="flex items-center justify-between border-t border-border/30 pt-4 mb-1">
               <p className="text-[12px] font-medium text-muted-foreground">
                 {activeCount > 0 ? `${activeCount} remaining` : 'All done'}
@@ -155,7 +155,7 @@ export function Tasks() {
             </div>
           </div>
 
-          <div className="px-6 pb-6">
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
             {visible.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
                 <CheckCircle2 className="w-8 h-8 text-muted-foreground/30" strokeWidth={1} />
@@ -184,7 +184,7 @@ export function Tasks() {
                     <motion.div
                       key={task.id}
                       layout
-                      className="group flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 hover:bg-muted/50 transition-colors"
+                      className="group flex min-h-11 items-center gap-3 rounded-xl px-2 py-1 sm:py-2 -mx-2 hover:bg-muted/50 transition-colors"
                       variants={{
                         hidden: { opacity: 0, y: 6 },
                         show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 25 } },
@@ -242,7 +242,7 @@ export function Tasks() {
                       <motion.button
                         onClick={() => deleteTask(task.id)}
                         aria-label="Delete task"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground/50 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/5 transition-all"
+                        className="h-11 w-11 lg:h-7 lg:w-7 flex items-center justify-center rounded-lg text-muted-foreground/50 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:text-destructive hover:bg-destructive/5 transition-all"
                         whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
                       >
                         <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />

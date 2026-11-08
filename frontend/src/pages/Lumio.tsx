@@ -44,8 +44,8 @@ export function Lumio() {
   const waiting = sending && !messages.some((m) => m.streaming)
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col -mx-10 -my-8">
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-4 py-8">
+    <div className="h-full lg:h-[calc(100dvh_-_4rem)] flex flex-col -mx-4 lg:-mx-10 lg:-my-8">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-6 lg:py-8">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center">
             <div className="text-center space-y-4 max-w-2xl">
@@ -61,7 +61,7 @@ export function Lumio() {
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                className="text-3xl font-semibold"
+                className="text-2xl sm:text-3xl font-semibold"
               >
                 Olá{displayName ? `, ${displayName}` : ''}. Como posso ajudar?
               </motion.h1>
@@ -92,7 +92,7 @@ export function Lumio() {
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] ${
+                    className={`min-w-0 max-w-[85%] sm:max-w-[80%] ${
                       msg.role === 'user' ? 'text-right' : ''
                     }`}
                   >

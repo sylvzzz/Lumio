@@ -122,13 +122,27 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
   body {
     @apply bg-canvas text-foreground font-sans antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
   }
-  html {
-    @apply font-sans;
+  #root {
+    min-height: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  button,
+  a,
+  [role='button'] {
+    touch-action: manipulation;
   }
   ::selection {
     @apply bg-accent/20 text-accent;
@@ -147,6 +161,27 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(0,0,0,0.25);
   }
+}
+
+/* Full-height shell that survives Safari's dynamic toolbars. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* iOS Safari zooms focused form fields below 16px. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Keep momentum scrolling inside panels from leaking to the page behind. */
+.overscroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @utility animate-fade-in {

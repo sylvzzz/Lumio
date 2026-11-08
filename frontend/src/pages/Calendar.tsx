@@ -141,12 +141,12 @@ export function Calendar() {
     <div className="max-w-5xl mx-auto animate-fade-in">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Calendar</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Calendar</h1>
           <p className="text-muted-foreground text-sm mt-1">Your schedule at a glance.</p>
         </div>
         <motion.button
           onClick={() => openCreateDialog(null)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 min-h-11 sm:min-h-0 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 transition-colors shrink-0"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
         >
@@ -181,21 +181,21 @@ export function Calendar() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={goToday}
-                    className="rounded-lg border border-border/50 bg-card px-3 py-1.5 text-[12px] font-medium text-foreground shadow-sm hover:bg-muted/60 active:scale-95 transition-all"
+                    className="hidden sm:block rounded-lg border border-border/50 bg-card px-3 py-1.5 text-[12px] font-medium text-foreground shadow-sm hover:bg-muted/60 active:scale-95 transition-all"
                   >
                     Today
                   </button>
                   <button
                     onClick={goPrev}
                     aria-label="Previous month"
-                    className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
+                    className="h-11 w-11 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
                   >
                     <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={goNext}
                     aria-label="Next month"
-                    className="h-7 w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
+                    className="h-11 w-11 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
                   >
                     <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
                   </button>
@@ -207,12 +207,12 @@ export function Calendar() {
                     animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
                     exit={shouldReduceMotion ? {} : { opacity: 0, y: -6 }}
                     transition={{ duration: 0.18, ease: [0.42, 0, 0.58, 1] }}
-                    className="absolute inset-x-0 text-center pointer-events-none text-[15px] font-semibold tracking-tight"
+                    className="absolute inset-x-0 text-center pointer-events-none text-[13px] sm:text-[15px] font-semibold tracking-tight"
                   >
                     {monthLabel}
                   </motion.h2>
                 </AnimatePresence>
-                <div className="w-24 shrink-0" />
+                <div className="hidden sm:block w-24 shrink-0" />
               </div>
 
               <div className="grid grid-cols-7 border-b border-border/30">
@@ -246,7 +246,7 @@ export function Calendar() {
                         <div
                           key={key}
                           className={cn(
-                            'h-[92px] lg:h-[108px] overflow-hidden border-b border-r border-border/30 p-1.5 transition-colors cursor-pointer',
+                            'h-[76px] sm:h-[92px] lg:h-[108px] overflow-hidden border-b border-r border-border/30 p-1 sm:p-1.5 transition-colors cursor-pointer',
                             i % 7 === 6 && 'border-r-0',
                             i >= 35 && 'border-b-0',
                             !inMonth && 'bg-muted/20',
@@ -299,7 +299,7 @@ export function Calendar() {
           </div>
 
           <div className="w-full lg:w-80 shrink-0">
-            <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-6">
+            <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-4 sm:p-6">
               <div className="flex items-center gap-2.5 mb-5">
                 <CalendarIcon className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
                 <h2 className="text-[15px] font-semibold tracking-tight">Upcoming</h2>

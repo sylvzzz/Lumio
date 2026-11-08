@@ -80,13 +80,13 @@ export function AIPanel() {
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        className="absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 group/rs"
+        className="hidden lg:block absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-20 group/rs"
       >
         <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full bg-transparent transition-colors group-hover/rs:bg-accent/30 group-active/rs:bg-accent/60" />
       </div>
 
       <motion.div
-        className="px-6 pt-7 pb-4 border-b border-border/50 flex items-center justify-between"
+        className="px-4 pt-4 pb-3 lg:px-6 lg:pt-7 lg:pb-4 border-b border-border/50 flex items-center justify-between"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
@@ -103,26 +103,28 @@ export function AIPanel() {
         <div className="flex items-center gap-1.5">
           <motion.button
             onClick={handleNewChat}
-            className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
+            className="h-11 w-11 lg:h-6 lg:w-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors shrink-0"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
             title="New chat"
+            aria-label="New chat"
           >
             <Plus className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.5} />
           </motion.button>
           <motion.button
             onClick={closePanel}
-            className="w-6 h-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
+            className="h-11 w-11 lg:h-6 lg:w-6 rounded-lg bg-secondary flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors shrink-0"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
             title="Close panel"
+            aria-label="Close chat"
           >
             <X className="w-3.5 h-3.5" strokeWidth={1.5} />
           </motion.button>
         </div>
       </motion.div>
 
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 lg:px-5 lg:py-5 space-y-4">
         {!currentSession && !isLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <Bot className="w-8 h-8 text-accent/30 mb-3" strokeWidth={1} />
@@ -182,7 +184,7 @@ export function AIPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="px-5 py-4 border-t border-border/50">
+      <div className="px-4 py-3 lg:px-5 lg:py-4 border-t border-border/50 shrink-0">
         <div className="flex items-center gap-2 bg-card border border-border/50 rounded-2xl px-4 py-2.5 transition-colors">
           <input
             type="text"
@@ -191,12 +193,13 @@ export function AIPanel() {
             onKeyDown={handleKeyDown}
             placeholder={i18n['ask_lumio']}
             disabled={sending}
-            className="flex-1 text-[13px] bg-transparent placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
+            className="flex-1 min-w-0 text-[13px] bg-transparent placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50"
           />
           <motion.button
             onClick={() => handleSend()}
             disabled={sending || !input.trim()}
-            className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center shrink-0 disabled:opacity-40"
+            aria-label="Send message"
+            className="h-11 w-11 lg:h-7 lg:w-7 rounded-lg bg-accent flex items-center justify-center shrink-0 disabled:opacity-40"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
           >

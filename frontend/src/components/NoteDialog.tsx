@@ -58,7 +58,7 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg rounded-2xl p-6 gap-0">
+      <DialogContent className="sm:max-w-lg rounded-2xl p-4 sm:p-6 gap-0">
         <DialogHeader className="p-0 mb-4">
           <DialogTitle className="text-[15px] font-semibold text-left">
             {isNew ? 'New Note' : 'Edit Note'}
@@ -77,7 +77,7 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
           {!isNew && (
             <button
               onClick={handleDelete}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
               Delete
@@ -86,14 +86,14 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
           <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
+              className="px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !content.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
             >
               <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
               {saving ? 'Saving...' : 'Save'}

@@ -17,7 +17,7 @@ export function EmailDetail({ email, open, onClose }: EmailDetailProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-xl rounded-2xl p-0 gap-0 overflow-hidden">
-        <div className="p-6 pb-4 border-b border-border/30">
+        <div className="p-4 sm:p-6 pb-4 border-b border-border/30">
           <DialogHeader className="p-0">
             <div className="flex items-center gap-2.5">
               <Mail className="w-4.5 h-4.5 text-muted-foreground shrink-0" strokeWidth={1.5} />
@@ -28,14 +28,14 @@ export function EmailDetail({ email, open, onClose }: EmailDetailProps) {
           </DialogHeader>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-3 text-[13px]">
+        <div className="p-4 sm:p-6 space-y-4">
+          <div className="flex flex-wrap items-center gap-3 text-[13px]">
             <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
               <User className="w-4 h-4 text-accent" strokeWidth={1.5} />
             </div>
-            <div>
-              <p className="font-medium text-foreground">{email?.from_name || email?.from_email}</p>
-              <p className="text-muted-foreground text-[12px]">{email?.from_email}</p>
+            <div className="min-w-0">
+              <p className="font-medium text-foreground truncate">{email?.from_name || email?.from_email}</p>
+              <p className="text-muted-foreground text-[12px] truncate">{email?.from_email}</p>
             </div>
             <div className="flex items-center gap-1 ml-auto text-muted-foreground">
               <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />

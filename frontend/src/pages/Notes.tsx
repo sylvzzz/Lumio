@@ -34,12 +34,12 @@ export function Notes() {
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Notes</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Notes</h1>
           <p className="text-muted-foreground text-sm mt-1">Quick thoughts and reminders.</p>
         </div>
         <motion.button
           onClick={createNote}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 min-h-11 sm:min-h-0 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent/90 transition-colors shrink-0"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
         >
@@ -59,7 +59,7 @@ export function Notes() {
         </div>
       ) : notes?.length === 0 ? (
         <motion.div
-          className="bg-card rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          className="bg-card rounded-2xl border border-border/50 shadow-sm p-8 sm:p-12 flex flex-col items-center justify-center gap-4"
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -71,7 +71,7 @@ export function Notes() {
           </div>
           <motion.button
             onClick={createNote}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-[13px] font-medium"
+            className="flex items-center gap-1.5 px-4 py-2 min-h-11 rounded-xl bg-accent text-white text-[13px] font-medium"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
           >
@@ -97,7 +97,7 @@ export function Notes() {
                 <motion.div
                   key={note.id}
                   layout
-                  className="bg-card rounded-2xl border border-border/30 shadow-sm p-5 hover:shadow-md transition-shadow cursor-pointer"
+                  className="bg-card rounded-2xl border border-border/30 shadow-sm p-4 sm:p-5 hover:shadow-md transition-shadow cursor-pointer"
                   variants={{
                     hidden: { opacity: 0, y: 8 },
                     show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 200, damping: 20 } },

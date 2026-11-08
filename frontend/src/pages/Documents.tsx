@@ -107,7 +107,7 @@ export function Documents() {
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Documents</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Documents</h1>
           <p className="text-muted-foreground text-sm mt-1">Upload and manage your files.</p>
         </div>
       </div>
@@ -118,7 +118,7 @@ export function Documents() {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onClick={handlePick}
-        className={`relative rounded-2xl border-2 border-dashed p-10 mb-8 text-center cursor-pointer transition-shadow duration-200 ${
+        className={`relative rounded-2xl border-2 border-dashed p-6 sm:p-10 mb-6 sm:mb-8 text-center cursor-pointer transition-shadow duration-200 ${
           dragging
             ? 'border-accent bg-accent/5'
             : 'border-border/50 hover:border-border hover:bg-secondary/30'
@@ -198,7 +198,7 @@ export function Documents() {
         </div>
       ) : docs?.length === 0 ? (
         <motion.div
-          className="bg-card rounded-2xl border border-border/50 shadow-sm p-12 flex flex-col items-center justify-center gap-4"
+          className="bg-card rounded-2xl border border-border/50 shadow-sm p-8 sm:p-12 flex flex-col items-center justify-center gap-4"
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 12 }}
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
@@ -252,7 +252,7 @@ export function Documents() {
                         e.stopPropagation()
                         setDocToDelete(doc)
                       }}
-                      className="flex items-center justify-center w-8 h-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      className="flex items-center justify-center h-11 w-11 lg:h-8 lg:w-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0"
                       aria-label={`Delete ${doc.filename}`}
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={1.5} />
@@ -273,7 +273,7 @@ export function Documents() {
         }}
       />
       <Dialog open={!!docToDelete} onOpenChange={(o) => !o && !deleting && setDocToDelete(null)}>
-        <DialogContent className="rounded-2xl p-6 gap-0">
+        <DialogContent className="rounded-2xl p-4 sm:p-6 gap-0">
           <DialogHeader className="p-0">
             <DialogTitle className="text-[15px] font-semibold text-left">Delete file?</DialogTitle>
             <DialogDescription className="mt-1.5">
@@ -283,14 +283,14 @@ export function Documents() {
           <div className="flex items-center justify-end gap-2 mt-6">
             <button
               onClick={() => setDocToDelete(null)}
-              className="px-4 py-1.5 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
+              className="px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
             >
               No
             </button>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
               {deleting ? 'Deleting...' : 'Delete'}

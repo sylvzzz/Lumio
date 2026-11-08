@@ -85,7 +85,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md rounded-2xl p-6 gap-0">
+      <DialogContent className="sm:max-w-md rounded-2xl p-4 sm:p-6 gap-0">
         <DialogHeader className="p-0 mb-5">
           <DialogTitle className="text-[15px] font-semibold text-left">New Event</DialogTitle>
         </DialogHeader>
@@ -106,7 +106,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
               role="switch"
               aria-checked={allDay}
               className={cn(
-                'relative h-6 w-10 rounded-full transition-colors',
+                "relative h-6 w-10 rounded-full transition-colors after:absolute after:-inset-2 after:content-['']",
                 allDay ? 'bg-accent' : 'bg-muted-foreground/30',
               )}
             >
@@ -119,50 +119,54 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 px-1">
+          <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:gap-3">
             <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">Start</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="flex-1 min-w-0 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
-            />
-            {!allDay && (
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-28 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="flex-1 min-w-0 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
               />
-            )}
+              {!allDay && (
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full sm:w-28 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+                />
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 px-1">
+          <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:gap-3">
             <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">End</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="flex-1 min-w-0 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
-            />
-            {!allDay && (
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-28 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="flex-1 min-w-0 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
               />
-            )}
+              {!allDay && (
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full sm:w-28 rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+                />
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 px-1 pt-1">
+          <div className="flex flex-wrap items-center gap-2 px-1 pt-1">
             {EVENT_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => setColor(c)}
                 aria-label={`Color ${c}`}
                 className={cn(
-                  'h-6 w-6 rounded-full transition-transform hover:scale-110',
+                  'h-11 w-11 sm:h-6 sm:w-6 rounded-full transition-transform hover:scale-110',
                   color === c && 'ring-2 ring-foreground/40 ring-offset-2 ring-offset-popover',
                 )}
                 style={{ backgroundColor: c }}
@@ -182,14 +186,14 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
         <div className="flex items-center justify-end gap-2 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
+            className="px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !valid}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
             <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
             {saving ? 'Adding...' : 'Add Event'}

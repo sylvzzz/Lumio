@@ -27,7 +27,7 @@ function formatAllDayRange(event: CalendarEvent) {
 export function EventDetail({ event, open, onClose }: EventDetailProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md rounded-2xl p-6 gap-0">
+      <DialogContent className="sm:max-w-md rounded-2xl p-4 sm:p-6 gap-0">
         <DialogHeader className="p-0 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: event?.color }} />

@@ -24,7 +24,7 @@ function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(!dark)}
-      className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
+      className="absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] h-11 w-11 sm:h-9 sm:w-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
       aria-label="Toggle theme"
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -90,17 +90,17 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain">
       <ThemeToggle />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-card border border-border rounded-2xl p-8 w-full max-w-md shadow-xl relative"
+        className="bg-card border border-border rounded-2xl p-6 sm:p-8 w-full max-w-md max-h-[calc(100dvh_-_2rem)] overflow-y-auto overscroll-contain shadow-xl relative"
       >
         {step > 0 && (
           <button
             onClick={handleBack}
-            className="absolute top-4 left-4 w-9 h-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
+            className="absolute top-4 left-4 h-11 w-11 sm:h-9 sm:w-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
             aria-label="Voltar"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -131,13 +131,13 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleNext()}
                 placeholder="Nome..."
-                className="w-full h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 autoFocus
               />
               <button
                 onClick={handleNext}
                 disabled={!name.trim()}
-                className="w-full h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Continuar
               </button>
@@ -169,7 +169,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                     if (!isNaN(n) && n >= 13 && n <= 95) setAge(n)
                   }
                 }}
-                className="w-full h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 <option value="">Seleccionar idade</option>
                 {ages.map((a) => (
@@ -179,13 +179,13 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
               <div className="flex gap-2">
                 <button
                   onClick={skipAge}
-                  className="flex-1 h-10 bg-background border border-border rounded-xl hover:bg-accent/5 transition-colors"
+                  className="flex-1 h-11 sm:h-10 bg-background border border-border rounded-xl hover:bg-accent/5 transition-colors"
                 >
                   Saltar
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
+                  className="flex-1 h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
                 >
                   Continuar
                 </button>
@@ -236,7 +236,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
               </div>
               <button
                 onClick={handleNext}
-                className="w-full h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
+                className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
               >
                 Continuar
               </button>
@@ -288,7 +288,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                   }
                 }}
                 disabled={!hasPaidService}
-                className="w-full h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {hasPaidService === 'no' ? 'Finalizar' : 'Continuar'}
               </button>
@@ -313,7 +313,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 <option value="">Seleccionar provider</option>
                 <option value="groq">Groq</option>
@@ -326,12 +326,12 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 onChange={(e) => setApiKey(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && provider && apiKey.trim() && handleNext()}
                 placeholder="API Key..."
-                className="w-full h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
               <button
                 onClick={handleNext}
                 disabled={!provider || !apiKey.trim()}
-                className="w-full h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Guardar e finalizar
               </button>

@@ -213,7 +213,7 @@ export function Settings() {
       >
         <div className="flex items-center gap-3 mb-2">
           <SettingsIcon className="w-6 h-6 text-accent" />
-          <h1 className="text-3xl font-semibold tracking-tight">{getText('title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{getText('title')}</h1>
         </div>
         <p className="text-muted-foreground">{getText('subtitle')}</p>
       </motion.div>
@@ -236,16 +236,16 @@ export function Settings() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">{getText('age')}</label>
                 <select
                   value={age}
                   onChange={(e) => setAge(e.target.value === '' ? '' : parseInt(e.target.value))}
-                  className="w-full h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="">{getText('not_specified')}</option>
                   {ages.map((a) => (
@@ -258,7 +258,7 @@ export function Settings() {
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="">{getText('not_specified')}</option>
                   <option value="male">{getText('male')}</option>
@@ -286,7 +286,7 @@ export function Settings() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setTheme('light')}
-                  className={`flex items-center justify-center gap-2 h-10 rounded-xl border transition-colors ${
+                  className={`flex items-center justify-center gap-2 h-11 sm:h-10 rounded-xl border transition-colors ${
                     theme === 'light' ? 'border-accent bg-accent/10' : 'border-border hover:bg-accent/5'
                   }`}
                 >
@@ -295,7 +295,7 @@ export function Settings() {
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
-                  className={`flex items-center justify-center gap-2 h-10 rounded-xl border transition-colors ${
+                  className={`flex items-center justify-center gap-2 h-11 sm:h-10 rounded-xl border transition-colors ${
                     theme === 'dark' ? 'border-accent bg-accent/10' : 'border-border hover:bg-accent/5'
                   }`}
                 >
@@ -304,7 +304,7 @@ export function Settings() {
                 </button>
                 <button
                   onClick={() => setTheme('system')}
-                  className={`flex items-center justify-center gap-2 h-10 rounded-xl border transition-colors ${
+                  className={`flex items-center justify-center gap-2 h-11 sm:h-10 rounded-xl border transition-colors ${
                     theme === 'system' ? 'border-accent bg-accent/10' : 'border-border hover:bg-accent/5'
                   }`}
                 >
@@ -320,7 +320,7 @@ export function Settings() {
                 <select
                   value={selectedLanguage}
                   onChange={(e) => setSelectedLanguage(e.target.value as Lang)}
-                  className="flex-1 h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                  className="flex-1 h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="pt">Português</option>
                   <option value="en">English</option>
@@ -349,7 +349,7 @@ export function Settings() {
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
-                className="w-full h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
                 <option value="groq">Groq</option>
                 <option value="openai">OpenAI</option>
@@ -363,7 +363,7 @@ export function Settings() {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={getText('api_key_placeholder')}
-                className="w-full h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
+                className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
             <button
@@ -389,13 +389,13 @@ export function Settings() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 16 }}
               transition={{ duration: 0.15 }}
-              className="sticky bottom-4 z-10 flex items-center justify-between gap-4 p-3 pl-4 bg-card rounded-2xl border border-border shadow-lg"
+              className="sticky bottom-[calc(1rem_+_env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 p-3 pl-4 bg-card rounded-2xl border border-border shadow-lg"
             >
               <span className="text-sm text-muted-foreground">{getText('unsaved_changes')}</span>
               <button
                 onClick={saveProfile}
                 disabled={isSaving}
-                className="px-6 py-2.5 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                className="px-6 py-2.5 min-h-11 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                 title={getText('save_profile')}
               >
                 {isSaving ? getText('saving') : getText('save')}

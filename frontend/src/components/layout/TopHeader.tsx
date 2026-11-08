@@ -101,14 +101,14 @@ export function TopHeader() {
 
   return (
     <motion.div
-      className="flex flex-col md:flex-row items-center justify-center mb-10 px-4"
+      className="flex flex-col md:flex-row items-center justify-center gap-5 md:gap-0 mb-6 lg:mb-10 px-0 lg:px-4"
       initial={shouldReduceMotion ? {} : { opacity: 0, y: -8}}
       animate={shouldReduceMotion ? {} : { opacity: 1, y: 0}}
       transition={{ duration: 0.4, ease: [0.42, 0, 0.58, 1] }}
     >
       <div className="flex flex-col md:w-full max-w-3xl w-full text-center md:text-left">
         <motion.h1
-          className="text-3xl font-semibold tracking-tight text-foreground"
+          className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground"
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 8}}
           animate={shouldReduceMotion ? {} : { opacity: 1, y: 0}}
           transition={{ duration: 0.4, delay: 0.1, ease: [0.42, 0, 0.58, 1] }}
@@ -124,11 +124,11 @@ export function TopHeader() {
           {subtitle}
         </motion.p>
       </div>
-      <div className="flex items-center gap-3 md:w-2/3 max-w-2xl">
-        <div ref={containerRef} className="relative flex-1">
+      <div className="flex w-full items-center gap-3 md:w-2/3 max-w-2xl">
+        <div ref={containerRef} className="relative flex-1 min-w-0">
           <motion.div
             className="relative w-full"
-            animate={{ width: open || query ? 380 : 280 }}
+            animate={{ width: open || query ? 'min(380px, 100%)' : 'min(280px, 100%)' }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
@@ -139,7 +139,7 @@ export function TopHeader() {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
               placeholder={placeholder}
-              className="w-full h-10 bg-card rounded-xl border border-border/50 pl-12 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+              className="w-full h-11 sm:h-10 bg-card rounded-xl border border-border/50 pl-12 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
             />
             {loading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -154,7 +154,7 @@ export function TopHeader() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.98 }}
                 transition={{ duration: 0.2 }}
-                className="absolute top-full mt-2 w-full bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50 min-w-[280px]"
+                className="absolute top-full mt-2 w-full bg-card border border-border rounded-2xl shadow-xl overflow-hidden z-50 min-w-0 lg:min-w-[280px]"
               >
                 {results.map((result) => (
                   <button
@@ -178,15 +178,17 @@ export function TopHeader() {
         </div>
         <button
           onClick={goToSettings}
-          className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
+          className="h-11 w-11 lg:h-9 lg:w-9 shrink-0 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
           title="Definições"
+          aria-label="Definições"
         >
           <Settings className="w-4 h-4" />
         </button>
         <button
           onClick={() => setDark(!dark)}
-          className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
+          className="h-11 w-11 lg:h-9 lg:w-9 shrink-0 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
           title={dark ? 'Tema claro' : 'Tema escuro'}
+          aria-label={dark ? 'Tema claro' : 'Tema escuro'}
         >
           {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>

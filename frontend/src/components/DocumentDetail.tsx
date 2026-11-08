@@ -71,21 +71,21 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className={`rounded-2xl p-0 gap-0 overflow-hidden ${isPdf ? 'sm:max-w-4xl max-h-[90vh]' : 'sm:max-w-xl'}`}>
-        <div className="p-6 pb-4 border-b border-border/30 flex items-center justify-between">
-          <DialogHeader className="p-0">
-            <div className="flex items-center gap-3">
+      <DialogContent className={`rounded-2xl p-0 gap-0 overflow-hidden ${isPdf ? 'sm:max-w-4xl max-h-[calc(100dvh_-_2rem)]' : 'sm:max-w-xl'}`}>
+        <div className="p-4 sm:p-6 pb-4 border-b border-border/30 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <DialogHeader className="p-0 min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               <Icon className={`w-5 h-5 ${color} shrink-0`} strokeWidth={1.5} />
-              <DialogTitle className="text-[15px] font-semibold text-left">
+              <DialogTitle className="text-[15px] font-semibold text-left truncate">
                 {doc.filename}
               </DialogTitle>
             </div>
           </DialogHeader>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
               {deleting ? 'Deleting...' : 'Delete'}
@@ -93,7 +93,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
             <a
               href={getDownloadUrl(doc)}
               download={doc.filename}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors"
             >
               <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
               Download
@@ -101,9 +101,9 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
           </div>
         </div>
 
-        <div className={isPdf ? '' : 'p-6 space-y-4'}>
+        <div className={isPdf ? '' : 'p-4 sm:p-6 space-y-4'}>
           {!isPdf && (
-            <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
               <span>{doc.file_type.toUpperCase()}</span>
               <span>·</span>
               <span>{formatSize(doc.file_size)}</span>
@@ -113,7 +113,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
           )}
 
           {isPdf ? (
-            <div className="w-full h-[70vh] bg-canvas">
+            <div className="w-full h-[60dvh] sm:h-[70vh] bg-canvas">
               <iframe
                 src={getViewUrl(doc)}
                 className="w-full h-full border-0"

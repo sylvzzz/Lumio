@@ -23,7 +23,7 @@ function ThemeToggle() {
   return (
     <button
       onClick={() => setDark(!dark)}
-      className="absolute top-6 right-6 w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors z-10"
+      className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-[max(1.5rem,env(safe-area-inset-right))] h-11 w-11 sm:h-10 sm:w-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors z-10"
       aria-label="Toggle theme"
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -85,12 +85,12 @@ export function Intro({ onContinue }: IntroProps) {
   const { user } = useUser()
   const language = user.language ?? 'pt'
   return (
-    <div className="min-h-screen bg-canvas relative overflow-hidden">
+    <div className="min-h-dvh bg-canvas relative overflow-hidden">
       <ThemeToggle />
       
       <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/5" />
       
-      <div className="relative max-w-7xl mx-auto px-6 py-12">
+      <div className="relative max-w-7xl mx-auto px-4 py-10 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -98,19 +98,19 @@ export function Intro({ onContinue }: IntroProps) {
           className="text-center mb-12"
         >
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center">
-              <Bot className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-accent flex items-center justify-center">
+              <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <h1 className="text-5xl font-bold tracking-tight">Lumio</h1>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Lumio</h1>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 px-2">
             O teu workspace pessoal com IA. Centraliza notas, documentos, emails e calendário num só lugar.
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onContinue}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-accent text-white rounded-xl text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 min-h-11 bg-accent text-white rounded-xl text-base sm:text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
           >
             Começar
             <ArrowRight className="w-5 h-5" />
@@ -121,7 +121,7 @@ export function Intro({ onContinue }: IntroProps) {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="mb-16"
+          className="hidden md:block mb-16"
         >
           <div className="relative mx-auto max-w-7xl">
             <div className="absolute -inset-4 bg-gradient-to-r from-accent/20 to-blue-500/20 rounded-3xl blur-2xl opacity-50" />
@@ -310,7 +310,7 @@ export function Intro({ onContinue }: IntroProps) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onContinue}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-accent text-white rounded-xl text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 min-h-11 bg-accent text-white rounded-xl text-base sm:text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
           >
             Começar agora
             <ArrowRight className="w-5 h-5" />
