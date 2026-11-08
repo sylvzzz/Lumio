@@ -1,7 +1,7 @@
 """FastAPI backend for Lumio (42-rag style, single-user local)."""
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from src.chunking import FILES_DIR
 from src.chat import append_exchange, create_chat, get_chat, list_chats
 from src.logger import FatalError
+from src.models import MinimalSource
 from src.rag import RAG
 
 ALLOWED_SUFFIXES = (".pdf", ".docx", ".md", ".txt")
@@ -228,9 +229,10 @@ def send_chat_message(req: ChatMessageReq) -> dict:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        model_res = rag.answer(query, k=5, history=history)
+        for_model, found = _model_sources(query)
+        model_res = rag._load_engine().answer(query, for_model, history)
         answer = model_res.answer
-        sources = model_res.sources
+        sources = found
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -257,6 +259,148 @@ def send_chat_message(req: ChatMessageReq) -> dict:
         pass
 
     return {**user_msg, "ai_response": ai_msg}
+
+
+# ---------------------------------------------------------------------------
+# Assistente com acesso aos dados do utilizador.
+#
+# Em vez de adivinhar palavras-chave, o modelo recebe sempre um resumo dos
+# dados pessoais (agenda, tarefas, notas, lista de documentos) + a data de
+# hoje, e raciocina sobre eles ("esta semana", "em outubro", "o que falta
+# fazer"...). Os conteúdos de documentos longos vêm da pesquisa BM25, agora
+# alargada com palavras-chave/sinónimos gerados pelo próprio modelo.
+# ---------------------------------------------------------------------------
+_PT_DAYS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
+_CONTEXT_PATH = "0-dados-do-utilizador"
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _one_line(text: Any, limit: int) -> str:
+    t = " ".join(str(text or "").split())
+    return t if len(t) <= limit else t[: limit - 1] + "…"
+
+
+def _fit(lines: list[str], budget: int, what: str) -> list[str]:
+    out, used = [], 0
+    for i, line in enumerate(lines):
+        if used + len(line) + 1 > budget:
+            out.append(f"(+{len(lines) - i} {what} omitidos por falta de espaço)")
+            break
+        out.append(line)
+        used += len(line) + 1
+    return out
+
+
+def _calendar_lines(today: datetime) -> tuple[list[str], str]:
+    lo, hi = today - timedelta(days=120), today + timedelta(days=400)
+    rows = []
+    for e in _load_json(CALENDAR_FILE, []):
+        s = _parse_dt(e.get("start_time"))
+        if s is None or not (lo <= s < hi):
+            continue
+        rows.append((s, _parse_dt(e.get("end_time")), e))
+    rows.sort(key=lambda r: r[0])
+    lines = []
+    for s, en, e in rows:
+        when = f"{_PT_DAYS[s.weekday()]} {s:%d/%m/%Y}"
+        if e.get("all_day"):
+            when += " (dia todo)"
+        else:
+            when += f" {s:%H:%M}" + (f"–{en:%H:%M}" if en and en.date() == s.date() else "")
+        desc = _one_line(e.get("description"), 100)
+        lines.append(f"- {when} | {_one_line(e.get('title'), 100)}" + (f" | {desc}" if desc else ""))
+    return lines, f"{lo:%d/%m/%Y} a {hi:%d/%m/%Y}"
+
+
+def _user_data_context() -> MinimalSource:
+    now = datetime.now()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    user = _load_json(USER_FILE, {}) or {}
+
+    cal, cal_range = _calendar_lines(today)
+    tasks = _load_json(TASKS_FILE, [])
+    pending = [f"- [ ] {_one_line(t.get('title'), 120)}" for t in tasks if not t.get("done")]
+    done = [f"- [x] {_one_line(t.get('title'), 120)}" for t in tasks if t.get("done")][-15:]
+
+    notes = sorted(_load_json(NOTES_FILE, []), key=lambda n: n.get("updated_at") or "", reverse=True)
+    note_lines = []
+    for n in notes:
+        d = _parse_dt(n.get("updated_at"))
+        note_lines.append(f"- ({d:%d/%m/%Y})" if d else "-")
+        note_lines[-1] += f" {_one_line(n.get('content'), 300)}"
+
+    docs = []
+    try:
+        for p in sorted(Path(FILES_DIR).iterdir()):
+            if p.is_file() and not p.name.endswith(".meta.json") and not p.name.startswith(("note_", "event_")):
+                docs.append(f"- {_original_name(p.name)}")
+    except OSError:
+        pass
+
+    parts = [
+        "INSTRUÇÕES: Este é o resumo dos dados pessoais do utilizador"
+        + (f" ({user.get('name')})" if user.get("name") else "")
+        + ". Responde a perguntas naturais sobre estes dados, mesmo que a pergunta "
+        "use outras palavras. Faz tu os cálculos de datas (hoje, esta semana, a "
+        "próxima semana, em outubro, mês passado...). Se algo estiver relacionado "
+        "com o pedido, usa-o. Só dizes que não tens informação quando nada nos "
+        "dados nem nos excertos de documentos tiver relação com o pedido.",
+        f"Data e hora atuais: {_PT_DAYS[now.weekday()]}, {now:%d/%m/%Y %H:%M}.",
+        f"AGENDA (de {cal_range}, por ordem cronológica):",
+        *(_fit(cal, 5000, "eventos") or ["(sem eventos)"]),
+        "TAREFAS:",
+        *(_fit(pending + done, 1500, "tarefas") or ["(sem tarefas)"]),
+        "NOTAS (mais recentes primeiro):",
+        *(_fit(note_lines, 2500, "notas") or ["(sem notas)"]),
+        "DOCUMENTOS CARREGADOS (o conteúdo relevante aparece nos excertos seguintes):",
+        *(_fit(docs, 800, "documentos") or ["(sem documentos)"]),
+    ]
+    text = "\n".join(parts)
+    return MinimalSource(file_path=_CONTEXT_PATH, first_character_index=0,
+                         last_character_index=len(text), content=text)
+
+
+def _search_keywords(query: str) -> str:
+    """Pede ao modelo palavras-chave e sinónimos para a pesquisa em documentos."""
+    try:
+        engine = rag._load_engine()
+        res = engine.client.chat.completions.create(
+            model=engine.model_name,
+            messages=[
+                {"role": "system", "content": (
+                    "Gera até 10 palavras-chave e sinónimos (português e inglês) "
+                    "para procurar, em documentos e notas pessoais, informação "
+                    "relacionada com a pergunta. Responde só com as palavras "
+                    "separadas por espaços, sem pontuação nem explicações.")},
+                {"role": "user", "content": query[:500]},
+            ],
+            temperature=0,
+            max_tokens=120,
+        )
+        text = (res.choices[0].message.content or "")
+        text = text.split("</think>")[-1]
+        return " ".join(text.split())[:300]
+    except Exception:
+        return ""
+
+
+def _model_sources(query: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
+    """Devolve (fontes para o modelo, fontes a mostrar ao utilizador)."""
+    try:
+        keywords = _search_keywords(query)
+        found = rag.search(f"{query} {keywords}".strip(), 8).retrieved_sources
+    except Exception:
+        found = []
+    found = [s for s in found if not Path(s.file_path).name.startswith("event_")][:5]
+    return [_user_data_context()] + found, found
 
 
 def _sse(event: str, data: dict) -> str:
@@ -287,7 +431,8 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        sources, tokens = rag.stream_answer(query, k=5, history=history)
+        for_model, sources = _model_sources(query)
+        tokens = rag._load_engine().answer_stream(query, for_model, history)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

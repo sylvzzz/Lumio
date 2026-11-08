@@ -36,6 +36,9 @@ clean_data:
 app:
 	mkdir -p $(LUMIO_DATA); docker compose up -d
 
+restart:
+	mkdir -p $(LUMIO_DATA); docker compose build --no-cache; docker compose up -d
+
 stop:
 	cd frontend; docker compose down; cd ../backend; docker compose down
 
