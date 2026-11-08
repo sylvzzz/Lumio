@@ -89,7 +89,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
 
 export function Sidebar() {
   return (
-    <aside className="hidden lg:flex w-[260px] h-full flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">
+    <aside className="hidden w-[260px] h-full flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shrink-0 transition-colors duration-300">
       <SidebarContent />
     </aside>
   )

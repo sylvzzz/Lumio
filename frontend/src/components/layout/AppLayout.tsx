@@ -8,7 +8,9 @@ import { TopHeader } from './TopHeader'
 import { AIPanel } from './AIPanel'
 import { useAIPanelStore } from '@/store/ai-panel'
 
-const DESKTOP_QUERY = '(min-width: 1024px)'
+// Menu and chat always open as overlays on top of the page (the page never shrinks).
+// To dock them again on large screens, set this to e.g. '(min-width: 1024px)'.
+const DESKTOP_QUERY = '(min-width: 99999px)'
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -56,7 +58,7 @@ function MobileTopBar({
   onOpenChat: () => void
 }) {
   return (
-    <header className="lg:hidden flex items-center justify-between gap-2 min-h-14 px-3 pt-[env(safe-area-inset-top)] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] border-b border-border/50 bg-background/80 backdrop-blur-2xl shrink-0">
+    <header className="flex items-center justify-between gap-2 min-h-14 px-3 pt-[env(safe-area-inset-top)] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] border-b border-border/50 bg-background/80 backdrop-blur-2xl shrink-0">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -115,7 +117,7 @@ function MobileChat({ open, onClose }: { open: boolean; onClose: () => void }) {
         <DialogPrimitive.Backdrop className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0" />
         <DialogPrimitive.Popup
           style={{ top: 'var(--vv-top, 0px)', height: 'var(--vv-height, 100dvh)' }}
-          className="fixed inset-x-0 z-50 flex flex-col bg-background/95 backdrop-blur-2xl outline-none transition-transform duration-200 data-starting-style:translate-x-full data-ending-style:translate-x-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+          className="fixed inset-x-0 sm:left-auto sm:w-[420px] sm:max-w-full sm:border-l sm:border-border/50 sm:shadow-xl z-50 flex flex-col bg-background/95 backdrop-blur-2xl outline-none transition-transform duration-200 data-starting-style:translate-x-full data-ending-style:translate-x-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
         >
           <DialogPrimitive.Title className="sr-only">Lumio chat</DialogPrimitive.Title>
           <AIPanel />

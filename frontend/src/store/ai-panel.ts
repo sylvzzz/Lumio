@@ -16,8 +16,7 @@ interface AIPanelState {
   setWidth: (width: number) => void
 }
 
-const isDesktopViewport =
-  typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+const isDesktopViewport = false // chat starts closed; it opens as an overlay
 
 export const useAIPanelStore = create<AIPanelState>()(
   persist(

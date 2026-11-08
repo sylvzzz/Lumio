@@ -139,7 +139,7 @@ export function TopHeader() {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
               placeholder={placeholder}
-              className="w-full h-11 sm:h-10 bg-card rounded-xl border border-border/50 pl-12 pr-3 text-[13px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
+              className="w-full h-11 sm:h-10 bg-card rounded-xl border border-border/50 pl-10 pr-3 text-[13px] text-ellipsis placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
             />
             {loading && (
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
