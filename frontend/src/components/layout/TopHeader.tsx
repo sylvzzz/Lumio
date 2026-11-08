@@ -40,7 +40,7 @@ export function TopHeader() {
   // Greetings and texts based on language
   const greets = language === 'pt' ? ['Bom dia', 'Boa tarde', 'Boa noite'] : ['Good morning', 'Good afternoon', 'Good evening']
   const hour = new Date().getHours()
-  const subtitle = language === 'pt' ? 'Tudo o que precisas está pronto.' : 'Everything you need is ready.'
+  const subtitle = language === 'pt' ? 'Bem-vindo de volta!' : 'Welcome back!'
   const placeholder = language === 'pt' ? 'Pesquisar páginas, notas, documentos...' : 'Search pages, notes, documents...'
 
   // --- SEARCH ---

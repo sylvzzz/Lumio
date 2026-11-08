@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import type { SourceFile } from '@/lib/api'
+import { useUser } from '@/hooks/useUser'
 
 export function SourceRows({ files, animate }: { files: SourceFile[]; animate: boolean }) {
+  const { user } = useUser()
+  const pt = (user.language ?? 'pt') === 'pt'
   const [visible, setVisible] = useState(animate ? 0 : files.length)
   const [read, setRead] = useState(animate ? 0 : files.length)
   const [collapsed, setCollapsed] = useState(!animate)
@@ -40,7 +43,11 @@ export function SourceRows({ files, animate }: { files: SourceFile[]; animate: b
         className="-ml-1 mb-1.5 flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
       >
         <Check className="h-3 w-3 text-emerald-500" strokeWidth={2} />
-        <span>Read {files.length} {files.length === 1 ? 'file' : 'files'}</span>
+        <span>
+          {pt
+            ? `Leu ${files.length} ${files.length === 1 ? 'fonte' : 'fontes'}`
+            : `Read ${files.length} ${files.length === 1 ? 'source' : 'sources'}`}
+        </span>
         <ChevronDown className="h-3 w-3" strokeWidth={1.75} />
       </button>
     )
@@ -65,7 +72,7 @@ export function SourceRows({ files, animate }: { files: SourceFile[]; animate: b
               <Loader2 className="h-3 w-3 shrink-0 animate-spin" strokeWidth={1.75} />
             )}
             <span className="truncate">
-              {isRead ? 'Read' : 'Reading'} {file.name}
+              {isRead ? (pt ? 'Leu' : 'Read') : (pt ? 'A ler' : 'Reading')} {file.name}
             </span>
           </motion.div>
         )

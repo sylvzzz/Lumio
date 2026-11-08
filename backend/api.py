@@ -1,7 +1,9 @@
 """FastAPI backend for Lumio (42-rag style, single-user local)."""
 import json
+import os
+import re
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -232,7 +234,7 @@ def send_chat_message(req: ChatMessageReq) -> dict:
         for_model, found = _model_sources(query)
         model_res = rag._load_engine().answer(query, for_model, history)
         answer = model_res.answer
-        sources = found
+        sources = _used_sources(query, answer, found)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -272,15 +274,32 @@ def send_chat_message(req: ChatMessageReq) -> dict:
 # ---------------------------------------------------------------------------
 _PT_DAYS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 _CONTEXT_PATH = "0-dados-do-utilizador"
+# Ficheiros internos gerados a partir de notas e eventos: nunca aparecem ao utilizador.
+_GENERATED_PREFIXES = ("note_", "event_")
+
+
+try:
+    from zoneinfo import ZoneInfo
+    _LOCAL_TZ = ZoneInfo(os.getenv("LUMIO_TZ", "Europe/Lisbon"))
+except Exception:  # sem base de dados de fusos no sistema
+    _LOCAL_TZ = timezone.utc
+
+
+def _now_local() -> datetime:
+    return datetime.now(_LOCAL_TZ).replace(tzinfo=None)
 
 
 def _parse_dt(value: Any) -> datetime | None:
+    """Lê uma data ISO; valores com fuso (ex.: 'Z') são convertidos para a hora local."""
     if not isinstance(value, str) or not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(_LOCAL_TZ).replace(tzinfo=None)
+    return dt
 
 
 def _one_line(text: Any, limit: int) -> str:
@@ -304,24 +323,33 @@ def _calendar_lines(today: datetime) -> tuple[list[str], str]:
     rows = []
     for e in _load_json(CALENDAR_FILE, []):
         s = _parse_dt(e.get("start_time"))
-        if s is None or not (lo <= s < hi):
+        if s is None:
             continue
-        rows.append((s, _parse_dt(e.get("end_time")), e))
+        en = _parse_dt(e.get("end_time")) or s
+        if en < lo or s >= hi:
+            continue
+        rows.append((s, en, e))
     rows.sort(key=lambda r: r[0])
+
+    def day(d: datetime) -> str:
+        return f"{_PT_DAYS[d.weekday()]} {d:%d/%m/%Y}"
+
     lines = []
     for s, en, e in rows:
-        when = f"{_PT_DAYS[s.weekday()]} {s:%d/%m/%Y}"
+        multi_day = en.date() > s.date()
         if e.get("all_day"):
-            when += " (dia todo)"
+            when = f"{day(s)} até {day(en)} (dias inteiros)" if multi_day else f"{day(s)} (dia inteiro)"
+        elif multi_day:
+            when = f"de {day(s)} {s:%H:%M} até {day(en)} {en:%H:%M} (evento de vários dias)"
         else:
-            when += f" {s:%H:%M}" + (f"–{en:%H:%M}" if en and en.date() == s.date() else "")
+            when = f"{day(s)} {s:%H:%M}–{en:%H:%M}"
         desc = _one_line(e.get("description"), 100)
         lines.append(f"- {when} | {_one_line(e.get('title'), 100)}" + (f" | {desc}" if desc else ""))
     return lines, f"{lo:%d/%m/%Y} a {hi:%d/%m/%Y}"
 
 
 def _user_data_context() -> MinimalSource:
-    now = datetime.now()
+    now = _now_local()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     user = _load_json(USER_FILE, {}) or {}
 
@@ -340,7 +368,7 @@ def _user_data_context() -> MinimalSource:
     docs = []
     try:
         for p in sorted(Path(FILES_DIR).iterdir()):
-            if p.is_file() and not p.name.endswith(".meta.json") and not p.name.startswith(("note_", "event_")):
+            if p.is_file() and not p.name.endswith(".meta.json") and not p.name.startswith(_GENERATED_PREFIXES):
                 docs.append(f"- {_original_name(p.name)}")
     except OSError:
         pass
@@ -350,7 +378,8 @@ def _user_data_context() -> MinimalSource:
         + (f" ({user.get('name')})" if user.get("name") else "")
         + ". Responde a perguntas naturais sobre estes dados, mesmo que a pergunta "
         "use outras palavras. Faz tu os cálculos de datas (hoje, esta semana, a "
-        "próxima semana, em outubro, mês passado...). Se algo estiver relacionado "
+        "próxima semana, em outubro, mês passado...). Eventos de vários dias "
+        "decorrem em todos os dias entre o início e o fim. Se algo estiver relacionado "
         "com o pedido, usa-o. Só dizes que não tens informação quando nada nos "
         "dados nem nos excertos de documentos tiver relação com o pedido.",
         f"Data e hora atuais: {_PT_DAYS[now.weekday()]}, {now:%d/%m/%Y %H:%M}.",
@@ -368,32 +397,35 @@ def _user_data_context() -> MinimalSource:
                          last_character_index=len(text), content=text)
 
 
+def _llm_text(system: str, user: str, max_tokens: int = 120) -> str:
+    engine = rag._load_engine()
+    res = engine.client.chat.completions.create(
+        model=engine.model_name,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        temperature=0,
+        max_tokens=max_tokens,
+    )
+    text = res.choices[0].message.content or ""
+    return text.split("</think>")[-1].strip()
+
+
 def _search_keywords(query: str) -> str:
     """Pede ao modelo palavras-chave e sinónimos para a pesquisa em documentos."""
     try:
-        engine = rag._load_engine()
-        res = engine.client.chat.completions.create(
-            model=engine.model_name,
-            messages=[
-                {"role": "system", "content": (
-                    "Gera até 10 palavras-chave e sinónimos (português e inglês) "
-                    "para procurar, em documentos e notas pessoais, informação "
-                    "relacionada com a pergunta. Responde só com as palavras "
-                    "separadas por espaços, sem pontuação nem explicações.")},
-                {"role": "user", "content": query[:500]},
-            ],
-            temperature=0,
-            max_tokens=120,
+        text = _llm_text(
+            "Gera até 10 palavras-chave e sinónimos (português e inglês) para "
+            "procurar, em documentos e notas pessoais, informação relacionada com "
+            "a pergunta. Responde só com as palavras separadas por espaços, sem "
+            "pontuação nem explicações.",
+            query[:500],
         )
-        text = (res.choices[0].message.content or "")
-        text = text.split("</think>")[-1]
         return " ".join(text.split())[:300]
     except Exception:
         return ""
 
 
 def _model_sources(query: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
-    """Devolve (fontes para o modelo, fontes a mostrar ao utilizador)."""
+    """Devolve (fontes para o modelo, excertos encontrados na pesquisa)."""
     try:
         keywords = _search_keywords(query)
         found = rag.search(f"{query} {keywords}".strip(), 8).retrieved_sources
@@ -401,6 +433,78 @@ def _model_sources(query: str) -> tuple[list[MinimalSource], list[MinimalSource]
         found = []
     found = [s for s in found if not Path(s.file_path).name.startswith("event_")][:5]
     return [_user_data_context()] + found, found
+
+
+# --- Fontes mostradas ao utilizador: só o que o modelo realmente usou ---------
+_SOURCE_LABELS = {
+    "pt": {"calendar": "Calendário", "tasks": "Tarefas", "notes": "Notas"},
+    "en": {"calendar": "Calendar", "tasks": "Tasks", "notes": "Notes"},
+}
+
+
+def _used_sources(query: str, answer: str, found: list[MinimalSource]) -> list[MinimalSource]:
+    """Pergunta ao modelo que fontes sustentaram a resposta e devolve só essas.
+
+    Falha em silêncio: se não for possível apurar, não se mostra nada
+    (preferível a mostrar ficheiros que não têm nada a ver).
+    """
+    if not answer.strip():
+        return []
+    try:
+        lang = (_load_json(USER_FILE, {}) or {}).get("language", "pt")
+        labels = _SOURCE_LABELS.get(lang, _SOURCE_LABELS["en"])
+
+        # candidatos
+        cands: dict[str, str] = {}
+        if _load_json(CALENDAR_FILE, []):
+            cands["calendar"] = "agenda / eventos do calendário do utilizador"
+        if _load_json(TASKS_FILE, []):
+            cands["tasks"] = "lista de tarefas do utilizador"
+        note_chunks = [s for s in found if Path(s.file_path).name.startswith("note_")]
+        if _load_json(NOTES_FILE, []) or note_chunks:
+            extra = "; ".join(_one_line(s.content, 120) for s in note_chunks[:3])
+            cands["notes"] = "notas do utilizador" + (f" (ex.: {extra})" if extra else "")
+        doc_by_id: dict[str, list[MinimalSource]] = {}
+        for s in found:
+            name = Path(s.file_path).name
+            if name.startswith(_GENERATED_PREFIXES):
+                continue
+            key = next((k for k, v in doc_by_id.items() if Path(v[0].file_path).name == name), None)
+            if key is None:
+                key = f"doc{len(doc_by_id) + 1}"
+                doc_by_id[key] = []
+                cands[key] = f"documento '{_original_name(name)}': {_one_line(s.content, 250)}"
+            doc_by_id[key].append(s)
+        if not cands:
+            return []
+
+        listing = "\n".join(f'- "{k}": {v}' for k, v in cands.items())
+        raw = _llm_text(
+            "És um verificador. Recebes a pergunta de um utilizador, a resposta de um "
+            "assistente e uma lista de fontes candidatas. Indica que fontes foram "
+            "realmente usadas para dar a resposta. Uma fonte conta como usada se a "
+            "resposta se baseia nela, incluindo quando conclui que não há nada nela "
+            "(ex.: 'não tens eventos esta semana' usa o calendário). Se a resposta é "
+            "conversa geral, ou diz que não tem informação sobre o assunto, ou nenhuma "
+            "fonte é relevante, devolve []. Responde APENAS com um array JSON de ids, "
+            'por exemplo ["calendar"] ou [].',
+            f"Pergunta: {query[:500]}\n\nResposta: {answer[:1500]}\n\nFontes candidatas:\n{listing}",
+            max_tokens=60,
+        )
+        m = re.search(r"\[[^\]]*\]", raw)
+        ids = json.loads(m.group(0)) if m else []
+        ids = [i for i in ids if isinstance(i, str) and i in cands]
+
+        shown: list[MinimalSource] = []
+        for i in ids:
+            if i in doc_by_id:
+                shown.extend(doc_by_id[i])
+            else:
+                shown.append(MinimalSource(file_path=labels[i], first_character_index=0,
+                                           last_character_index=0, content=""))
+        return shown
+    except Exception:
+        return []
 
 
 def _sse(event: str, data: dict) -> str:
@@ -431,15 +535,12 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        for_model, sources = _model_sources(query)
+        for_model, found = _model_sources(query)
         tokens = rag._load_engine().answer_stream(query, for_model, history)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    files = _source_files(sources)
-
     def generate():
-        yield _sse("sources", {"files": files})
         parts = []
         try:
             for delta in tokens:
@@ -450,6 +551,8 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             return
 
         answer = "".join(parts).strip()
+        sources = _used_sources(query, answer, found)
+        yield _sse("sources", {"files": _source_files(sources)})
         now = datetime.utcnow().isoformat() + "Z"
         user_msg = {
             "id": str(uuid.uuid4()),
@@ -667,6 +770,8 @@ def documents() -> list[dict]:
             if not path.is_file() or suffix not in ALLOWED_SUFFIXES:
                 continue
             if path.name.endswith(".meta.json"):
+                continue
+            if path.name.startswith(_GENERATED_PREFIXES):
                 continue
             extracted = ""
             try:
@@ -905,7 +1010,7 @@ def search(q: str = "") -> dict:
         for path in sorted(files_dir.iterdir()):
             if not path.is_file() or path.name.endswith(".meta.json"):
                 continue
-            if path.name.startswith("note_") or path.name.startswith("event_"):
+            if path.name.startswith(_GENERATED_PREFIXES):
                 continue
             orig = _original_name(path.name).lower()
             if query in orig:
