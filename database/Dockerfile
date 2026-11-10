@@ -11,7 +11,7 @@ RUN rm -rf /var/lib/postgresql/*
 
 COPY . /postgresql
 COPY conf/postgresql.conf /etc/postgresql/15/main/postgresql.conf
-COPY init.sql /docker-entrypoint-initdb.d/init.sql
+COPY tools/lumio.sql /docker-entrypoint-initdb.d/lumio.sql
 
 RUN chmod +x /postgresql/tools/postgresql.sh
 

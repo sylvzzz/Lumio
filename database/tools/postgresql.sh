@@ -33,7 +33,12 @@ GRANT ALL PRIVILEGES ON DATABASE "$DB_NAME" TO "$DB_USER";
 CREATE USER "$DB_ADMIN" WITH PASSWORD '$DB_ADMIN_PASSWORD' SUPERUSER;
 SQL
 
-    psql -U "$DB_ADMIN" -d "$DB_NAME" -f /caminho/init.sql
+    PGPASSWORD="$DB_ADMIN_PASSWORD" psql \
+    -h localhost \
+    -U "$DB_ADMIN" \
+    -d "$DB_NAME" \
+    -v ON_ERROR_STOP=1 \
+    -f /docker-entrypoint-initdb.d/lumio.sql
 
     echo "Stopping temporary PostgreSQL server ..."
 

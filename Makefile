@@ -3,43 +3,29 @@ VENV = $(FOLDER)/.venv
 REQ = requirements.txt
 PY = $(VENV)/bin/python
 PIP = $(VENV)/bin/pip
-LUMIO_DATA = $(FOLDER)/lumio
-
+LUMIO_DATA = $(FOLDER)/lumio/data
 
 install:
-		python3 -m venv .venv; cd backend; $(PIP) install -r $(REQ); cd ../frontend; npm install
-
-dev-backend: ## Run backend locally
-	cd backend && $(PY) -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
-
-dev-frontend: ## Run frontend locally
-	cd frontend && npm run dev
-
-frontend-up:
-		cd frontend && docker compose up
-
-frontend-down:
-		cd frontend && docker compose down
-
-backend-up:
-		cd backend && docker compose up
-
-backend-down:
-		cd backend && docker compose up
+	python3 -m venv .venv
+	cd backend && $(PIP) install -r $(REQ)
+	cd frontend && npm install
 
 data:
-	mkdir -p $(LUMIO_DATA)
+	mkdir -p $(LUMIO_DATA)/postgres
+	mkdir -p $(LUMIO_DATA)/backend
 
 clean_data:
 	sudo rm -rf $(LUMIO_DATA)
 
-app:
-	mkdir -p $(LUMIO_DATA); docker compose up -d
+app: data
+	docker compose up -d --build
 
-restart:
-	mkdir -p $(LUMIO_DATA); docker compose build --no-cache; docker compose up -d
+restart: data
+	docker compose down
+	docker compose build --no-cache
+	docker compose up -d
 
 stop:
-	cd frontend; docker compose down; cd ../backend; docker compose down
+	docker compose down
 
-.PHONY: dev dev-backend dev-frontend frontend-up frontend-down backend-up backend-down app
+.PHONY: install dev-backend dev-frontend data clean_data app restart stop
