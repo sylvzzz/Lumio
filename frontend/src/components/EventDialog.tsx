@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { useT } from '@/hooks/useUser'
 
 const EVENT_COLORS = [
   '#0071e3', '#ff3b30', '#ff9f0a', '#ffcc00',
@@ -30,6 +31,7 @@ function toDateInput(d: Date) {
 }
 
 export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
+  const t = useT()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [allDay, setAllDay] = useState(false)
@@ -87,20 +89,20 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md rounded-2xl p-4 sm:p-6 gap-0">
         <DialogHeader className="p-0 mb-5">
-          <DialogTitle className="text-[15px] font-semibold text-left">New Event</DialogTitle>
+          <DialogTitle className="text-[15px] font-semibold text-left">{t.newEvent}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Event title"
+            placeholder={t.eventTitlePlaceholder}
             autoFocus
             className="w-full rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
           />
 
           <div className="flex items-center justify-between px-1">
-            <span className="text-[12px] font-medium text-muted-foreground">All day</span>
+            <span className="text-[12px] font-medium text-muted-foreground">{t.allDay}</span>
             <button
               onClick={() => setAllDay((v) => !v)}
               role="switch"
@@ -120,7 +122,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
           </div>
 
           <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:gap-3">
-            <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">Start</span>
+            <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">{t.start}</span>
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
                 type="date"
@@ -140,7 +142,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
           </div>
 
           <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:gap-3">
-            <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">End</span>
+            <span className="w-10 text-[12px] font-medium text-muted-foreground shrink-0">{t.end}</span>
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <input
                 type="date"
@@ -177,7 +179,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optional)"
+            placeholder={t.descriptionOptional}
             rows={2}
             className="w-full rounded-xl border border-border/50 bg-secondary/50 px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 resize-none transition-shadow"
           />
@@ -188,7 +190,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
             onClick={onClose}
             className="px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
           >
-            Cancel
+            {t.cancel}
           </button>
           <button
             onClick={handleSave}
@@ -196,7 +198,7 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
             className="flex items-center gap-1.5 px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium bg-accent text-white hover:bg-accent/90 disabled:opacity-50 transition-colors"
           >
             <Save className="w-3.5 h-3.5" strokeWidth={1.5} />
-            {saving ? 'Adding...' : 'Add Event'}
+            {saving ? t.adding : t.addEvent}
           </button>
         </div>
       </DialogContent>

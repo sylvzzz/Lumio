@@ -15,7 +15,10 @@ services:
     networks:
       - lumio
     volumes:
-      - ./lumio/data:/app/data
+      - ./lumio/data/backend:/app/data
+    depends_on:
+      - database
+
   nginx:
     build: ./nginx
     depends_on:
@@ -24,6 +27,48 @@ services:
       - "443:443"
     networks:
       - lumio
+
+  database:
+    build: ./database
+    restart: unless-stopped
+    secrets:
+      - db_name
+      - db_user
+      - db_admin
+      - db_root_password
+      - db_admin_password
+      - db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./lumio/data/postgres:/var/lib/postgresql/data
+    networks:
+      - lumio
+
+  adminer:
+    image: adminer:latest
+    container_name: lumio-adminer
+    restart: unless-stopped
+    depends_on:
+      - database
+    ports:
+      - "8080:8080"
+    networks:
+      - lumio
+
+secrets:
+  db_name:
+    file: ./secrets/db_name.txt
+  db_user:
+    file: ./secrets/db_user.txt
+  db_admin:
+    file: ./secrets/db_admin.txt
+  db_root_password:
+    file: ./secrets/db_root_password.txt
+  db_admin_password:
+    file: ./secrets/db_admin_password.txt
+  db_password:
+    file: ./secrets/db_password.txt
 
 networks:
   lumio:

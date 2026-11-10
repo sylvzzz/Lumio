@@ -8,6 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useT, useLang } from '@/hooks/useUser'
+import { localeOf } from '@/i18n'
 
 interface DocumentDetailProps {
   doc: Document | null
@@ -15,8 +17,8 @@ interface DocumentDetailProps {
   onClose: () => void
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   })
 }
@@ -48,6 +50,8 @@ function getDownloadUrl(doc: Document) {
 }
 
 export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
+  const t = useT()
+  const locale = localeOf(useLang())
   const [deleting, setDeleting] = useState(false)
   const queryClient = useQueryClient()
 
@@ -88,7 +92,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
               className="flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? t.deleting : t.delete}
             </button>
             <a
               href={getDownloadUrl(doc)}
@@ -96,7 +100,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
               className="flex items-center gap-1.5 px-3 py-1.5 min-h-11 sm:min-h-0 rounded-lg bg-accent text-white text-[12px] font-medium hover:bg-accent/90 transition-colors"
             >
               <Download className="w-3.5 h-3.5" strokeWidth={1.5} />
-              Download
+              {t.download}
             </a>
           </div>
         </div>
@@ -108,7 +112,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
               <span>·</span>
               <span>{formatSize(doc.file_size)}</span>
               <span>·</span>
-              <span>{formatDate(doc.created_at)}</span>
+              <span>{formatDate(doc.created_at, locale)}</span>
             </div>
           )}
 
@@ -122,7 +126,7 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
             </div>
           ) : (
             <div className="bg-secondary/30 rounded-xl p-4 text-[13px] text-foreground leading-relaxed whitespace-pre-wrap max-h-80 overflow-y-auto">
-              {doc.extracted_text || 'No text could be extracted from this file.'}
+              {doc.extracted_text || t.noExtractedText}
             </div>
           )}
         </div>

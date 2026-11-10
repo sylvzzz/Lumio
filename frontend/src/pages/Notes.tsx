@@ -4,9 +4,13 @@ import { StickyNote, Plus } from 'lucide-react'
 import { useNotes } from '@/hooks/use-notes'
 import { NoteDialog } from '@/components/NoteDialog'
 import type { Note } from '@/lib/api'
+import { useT, useLang } from '@/hooks/useUser'
+import { localeOf } from '@/i18n'
 
 export function Notes() {
   const shouldReduceMotion = useReducedMotion()
+  const t = useT()
+  const locale = localeOf(useLang())
   const { data: notes, isLoading } = useNotes()
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -34,8 +38,8 @@ export function Notes() {
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Notes</h1>
-          <p className="text-muted-foreground text-sm mt-1">Quick thoughts and reminders.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{t.notesTitle}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t.notesSubtitle}</p>
         </div>
         <motion.button
           onClick={createNote}
@@ -44,7 +48,7 @@ export function Notes() {
           whileTap={{ scale: 0.97 }}
         >
           <Plus className="w-4 h-4" strokeWidth={1.5} />
-          New Note
+          {t.newNote}
         </motion.button>
       </div>
 
@@ -66,8 +70,8 @@ export function Notes() {
         >
           <StickyNote className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">No notes yet</p>
-            <p className="text-[13px] text-muted-foreground mt-1">Create your first note to get started.</p>
+            <p className="text-sm font-medium text-foreground">{t.noNotesYet}</p>
+            <p className="text-[13px] text-muted-foreground mt-1">{t.createFirstNote}</p>
           </div>
           <motion.button
             onClick={createNote}
@@ -76,7 +80,7 @@ export function Notes() {
             whileTap={{ scale: 0.97 }}
           >
             <Plus className="w-4 h-4" strokeWidth={1.5} />
-            Create Note
+            {t.createNote}
           </motion.button>
         </motion.div>
       ) : (
@@ -112,7 +116,7 @@ export function Notes() {
                     <p className="text-[12px] text-muted-foreground mt-1 line-clamp-2">{preview}</p>
                   )}
                   <p className="text-[11px] text-muted-foreground mt-3">
-                    {new Date(note.updated_at).toLocaleDateString('en-US', {
+                    {new Date(note.updated_at).toLocaleDateString(locale, {
                       month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
                     })}
                   </p>

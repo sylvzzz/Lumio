@@ -7,6 +7,7 @@ import { Sidebar, SidebarContent } from './Sidebar'
 import { TopHeader } from './TopHeader'
 import { AIPanel } from './AIPanel'
 import { useAIPanelStore } from '@/store/ai-panel'
+import { useT } from '@/hooks/useUser'
 
 // Menu and chat always open as overlays on top of the page (the page never shrinks).
 // To dock them again on large screens, set this to e.g. '(min-width: 1024px)'.
@@ -57,12 +58,13 @@ function MobileTopBar({
   onOpenMenu: () => void
   onOpenChat: () => void
 }) {
+  const t = useT()
   return (
     <header className="flex items-center justify-between gap-2 min-h-14 px-3 pt-[env(safe-area-inset-top)] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] border-b border-border/50 bg-background/80 backdrop-blur-2xl shrink-0">
       <button
         type="button"
         onClick={onOpenMenu}
-        aria-label="Open menu"
+        aria-label={t.openMenu}
         aria-haspopup="dialog"
         aria-expanded={menuOpen}
         className="flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent/10 active:bg-accent/15"
@@ -78,7 +80,7 @@ function MobileTopBar({
       <button
         type="button"
         onClick={onOpenChat}
-        aria-label="Open chat"
+        aria-label={t.openChat}
         aria-haspopup="dialog"
         className="flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-accent/10 active:bg-accent/15"
       >
@@ -89,16 +91,17 @@ function MobileTopBar({
 }
 
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT()
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0" />
         <DialogPrimitive.Popup className="fixed inset-y-0 left-0 z-50 flex w-[85%] max-w-[320px] flex-col border-r border-border/50 bg-sidebar backdrop-blur-2xl shadow-xl outline-none transition-transform duration-200 data-starting-style:-translate-x-full data-ending-style:-translate-x-full pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)]">
-          <DialogPrimitive.Title className="sr-only">Menu</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t.menuAriaLabel}</DialogPrimitive.Title>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close menu"
+            aria-label={t.closeMenu}
             className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground active:bg-accent/15"
           >
             <X className="w-5 h-5" strokeWidth={1.5} />
@@ -111,6 +114,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 
 function MobileChat({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT()
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogPrimitive.Portal>
@@ -119,7 +123,7 @@ function MobileChat({ open, onClose }: { open: boolean; onClose: () => void }) {
           style={{ top: 'var(--vv-top, 0px)', height: 'var(--vv-height, 100dvh)' }}
           className="fixed inset-x-0 sm:left-auto sm:w-[420px] sm:max-w-full sm:border-l sm:border-border/50 sm:shadow-xl z-50 flex flex-col bg-background/95 backdrop-blur-2xl outline-none transition-transform duration-200 data-starting-style:translate-x-full data-ending-style:translate-x-full pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
         >
-          <DialogPrimitive.Title className="sr-only">Lumio chat</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="sr-only">{t.chatAriaLabel}</DialogPrimitive.Title>
           <AIPanel />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
@@ -131,6 +135,7 @@ export function AppLayout() {
   const location = useLocation()
   const shouldReduceMotion = useReducedMotion()
   const isDesktop = useIsDesktop()
+  const t = useT()
   const open = useAIPanelStore((s) => s.open)
   const menuOpen = useAIPanelStore((s) => s.menuOpen)
   const width = useAIPanelStore((s) => s.width)
@@ -206,7 +211,7 @@ export function AppLayout() {
                 className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-accent text-white text-[12px] font-medium shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
               >
                 <Bot className="w-4 h-4" strokeWidth={1.5} />
-                Ask Lumio
+                {t.askLumioButton}
               </motion.button>
             )}
           </AnimatePresence>

@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { useUser } from '@/hooks/useUser'
+import { useT } from '@/hooks/useUser'
 import {
   Bot, Home, Calendar, StickyNote, FileText, Inbox,
   CheckSquare, Settings, HelpCircle, LogOut,
 } from 'lucide-react'
-import { api } from '@/lib/api'   // ajusta o caminho
+import { api } from '@/lib/api'
 
 interface SidebarContentProps {
   onNavigate?: () => void
@@ -13,19 +13,18 @@ interface SidebarContentProps {
 
 export function SidebarContent({ onNavigate }: SidebarContentProps) {
   const shouldReduceMotion = useReducedMotion()
-  const { user } = useUser()
-  const language = user.language ?? 'pt'
+  const t = useT()
 
   const navItems = [
-    { to: '/', icon: Home, label: language === 'pt' ? 'Início' : 'Home' },
-    { to: '/calendar', icon: Calendar, label: language === 'pt' ? 'Calendário' : 'Calendar' },
-    { to: '/notes', icon: StickyNote, label: language === 'pt' ? 'Notas' : 'Notes' },
-    { to: '/documents', icon: FileText, label: language === 'pt' ? 'Documentos' : 'Documents' },
-    { to: '/inbox', icon: Inbox, label: language === 'pt' ? 'Emails' : 'Emails' },
-    { to: '/tasks', icon: CheckSquare, label: language === 'pt' ? 'Tarefas' : 'Tasks' },
-    { to: '/lumio', icon: Bot, label: language === 'pt' ? 'Lumio' : 'Lumio' },
-    { to: '/faq', icon: HelpCircle, label: language === 'pt' ? 'FAQ' : 'FAQ' },
-    { to: '/settings', icon: Settings, label: language === 'pt' ? 'Definições' : 'Settings' },
+    { to: '/', icon: Home, label: t.navHome },
+    { to: '/calendar', icon: Calendar, label: t.navCalendar },
+    { to: '/notes', icon: StickyNote, label: t.navNotes },
+    { to: '/documents', icon: FileText, label: t.navDocuments },
+    { to: '/inbox', icon: Inbox, label: t.navEmails },
+    { to: '/tasks', icon: CheckSquare, label: t.navTasks },
+    { to: '/lumio', icon: Bot, label: t.navLumio },
+    { to: '/faq', icon: HelpCircle, label: t.navFaq },
+    { to: '/settings', icon: Settings, label: t.navSettings },
   ]
 
   return (
@@ -47,7 +46,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
         </motion.div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto overscroll-contain px-3 space-y-1" aria-label="Main">
+      <nav className="flex-1 overflow-y-auto overscroll-contain px-3 space-y-1" aria-label={t.menuAriaLabel}>
         {navItems.map((item, i) => (
           <motion.div
             key={item.to}
@@ -83,7 +82,7 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
             className="w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-xl text-[13px] text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200"
           >
             <LogOut className="w-4 h-4" strokeWidth={1.5} />
-            <span>{language === 'pt' ? 'Terminar sessão' : 'Log out'}</span>
+            <span>{t.logout}</span>
           </button>
         </motion.div>
       </nav>

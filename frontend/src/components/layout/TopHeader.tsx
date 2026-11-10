@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useReducedMotion, motion, AnimatePresence } from 'framer-motion'
 import { Search, Moon, Sun, Settings, StickyNote, FileText, ArrowRight, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useUser } from '@/hooks/useUser'
+import { useT, useUser } from '@/hooks/useUser'
 
 interface SearchResult {
   id: string
@@ -13,6 +13,7 @@ interface SearchResult {
 }
 
 export function TopHeader() {
+  const t = useT()
   const { user } = useUser()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
@@ -25,23 +26,14 @@ export function TopHeader() {
     return document.documentElement.classList.contains('dark')
   })
   const shouldReduceMotion = useReducedMotion()
-  const language = user.language ?? 'pt'
-
-  // Sync language to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('language', language)
-  }, [language])
 
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [loading, setLoading] = useState(false)
 
-  // Greetings and texts based on language
-  const greets = language === 'pt' ? ['Bom dia', 'Boa tarde', 'Boa noite'] : ['Good morning', 'Good afternoon', 'Good evening']
+  const greets = [t.greetingMorning, t.greetingAfternoon, t.greetingEvening]
   const hour = new Date().getHours()
-  const subtitle = language === 'pt' ? 'Bem-vindo de volta!' : 'Welcome back!'
-  const placeholder = language === 'pt' ? 'Pesquisar páginas, notas, documentos...' : 'Search pages, notes, documents...'
 
   // --- SEARCH ---
   const doSearch = useCallback(async (q: string) => {
@@ -121,7 +113,7 @@ export function TopHeader() {
           animate={shouldReduceMotion ? {} : { opacity: 1}}
           transition={{ duration: 0.4, delay: 0.15}}
         >
-          {subtitle}
+          {t.welcomeBack}
         </motion.p>
       </div>
       <div className="flex w-full items-center gap-3 md:w-2/3 max-w-2xl">
@@ -138,7 +130,7 @@ export function TopHeader() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => { if (results.length > 0) setOpen(true) }}
-              placeholder={placeholder}
+              placeholder={t.searchPlaceholder}
               className="w-full h-11 sm:h-10 bg-card rounded-xl border border-border/50 pl-10 pr-3 text-[13px] text-ellipsis placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
             />
             {loading && (
@@ -179,16 +171,16 @@ export function TopHeader() {
         <button
           onClick={goToSettings}
           className="h-11 w-11 lg:h-9 lg:w-9 shrink-0 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
-          title="Definições"
-          aria-label="Definições"
+          title={t.settingsTitle}
+          aria-label={t.settingsTitle}
         >
           <Settings className="w-4 h-4" />
         </button>
         <button
           onClick={() => setDark(!dark)}
           className="h-11 w-11 lg:h-9 lg:w-9 shrink-0 rounded-xl bg-card border border-border/50 flex items-center justify-center hover:bg-accent/5 transition-colors"
-          title={dark ? 'Tema claro' : 'Tema escuro'}
-          aria-label={dark ? 'Tema claro' : 'Tema escuro'}
+          title={dark ? t.lightTheme : t.darkTheme}
+          aria-label={dark ? t.lightTheme : t.darkTheme}
         >
           {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>

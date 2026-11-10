@@ -13,6 +13,8 @@ import { api, type Document } from '@/lib/api'
 import { useDocuments } from '@/hooks/use-documents'
 import { useQueryClient } from '@tanstack/react-query'
 import { DocumentDetail } from '@/components/DocumentDetail'
+import { useT, useLang } from '@/hooks/useUser'
+import { localeOf, documentsCountLabel } from '@/i18n'
 
 const iconMap: Record<string, typeof FileText> = {
   pdf: FileText,
@@ -26,8 +28,8 @@ const colorMap: Record<string, string> = {
   txt: 'text-blue-500',
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleDateString(locale, {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   })
 }
@@ -40,6 +42,9 @@ function formatSize(bytes: number) {
 
 export function Documents() {
   const shouldReduceMotion = useReducedMotion()
+  const t = useT()
+  const lang = useLang()
+  const locale = localeOf(lang)
   const { data: docs, isLoading } = useDocuments()
   const queryClient = useQueryClient()
   const [dragging, setDragging] = useState(false)
@@ -71,11 +76,11 @@ export function Documents() {
     setUploadProgress(0)
     try {
       await api.documents.upload(file, undefined, (p) => setUploadProgress(p))
-      toast.success(file.name, { description: 'Uploaded successfully' })
+      toast.success(file.name, { description: t.uploadedSuccessfully })
       queryClient.invalidateQueries({ queryKey: ['documents'] })
     } catch (e) {
       console.error('Upload failed', e)
-      toast.error('Upload failed', { description: 'Please try again.' })
+      toast.error(t.uploadFailed, { description: t.tryAgain })
     }
     setUploading(false)
     setUploadProgress(0)
@@ -107,8 +112,8 @@ export function Documents() {
     <div className="max-w-4xl mx-auto animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Documents</h1>
-          <p className="text-muted-foreground text-sm mt-1">Upload and manage your files.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{t.documentsTitle}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t.documentsSubtitle}</p>
         </div>
       </div>
 
@@ -148,7 +153,7 @@ export function Documents() {
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-[13px] font-medium text-foreground truncate">{uploadFileName}</p>
                   <p className="text-[12px] text-muted-foreground mt-0.5">
-                    {uploadProgress}% · Uploading
+                    {uploadProgress}% · {t.uploading}
                   </p>
                 </div>
               </div>
@@ -177,10 +182,10 @@ export function Documents() {
                 <Upload className="w-5 h-5 text-accent" strokeWidth={1.5} />
               </div>
               <p className="text-[13px] text-foreground font-medium">
-                Drop a file here or click to browse
+                {t.dropFile}
               </p>
               <p className="text-[12px] text-muted-foreground">
-                PDF, CSV, or TXT — up to 10 MB
+                {t.fileTypesHint}
               </p>
             </motion.div>
           )}
@@ -204,8 +209,8 @@ export function Documents() {
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
           <FileText className="w-10 h-10 text-muted-foreground/40" strokeWidth={1} />
-          <p className="text-sm font-medium text-foreground">No documents yet</p>
-          <p className="text-[13px] text-muted-foreground">Upload a file above to get started.</p>
+          <p className="text-sm font-medium text-foreground">{t.noDocumentsYet}</p>
+          <p className="text-[13px] text-muted-foreground">{t.uploadFirstDocument}</p>
         </motion.div>
       ) : (
         <motion.div
@@ -217,7 +222,7 @@ export function Documents() {
             show: { transition: { staggerChildren: 0.04 } },
           }}
         >
-          <p className="text-[13px] text-muted-foreground mb-3">{docs?.length} document{docs?.length !== 1 ? 's' : ''}</p>
+          <p className="text-[13px] text-muted-foreground mb-3">{documentsCountLabel(lang, docs?.length ?? 0)}</p>
           <AnimatePresence mode="popLayout">
             {docs?.map((doc) => {
               const Icon = iconMap[doc.file_type] || FileText
@@ -244,7 +249,7 @@ export function Documents() {
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{doc.filename}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {doc.file_type.toUpperCase()} · {formatSize(doc.file_size)} · {formatDate(doc.updated_at)}
+                        {doc.file_type.toUpperCase()} · {formatSize(doc.file_size)} · {formatDate(doc.updated_at, locale)}
                       </p>
                     </div>
                     <button
@@ -253,7 +258,7 @@ export function Documents() {
                         setDocToDelete(doc)
                       }}
                       className="flex items-center justify-center h-11 w-11 lg:h-8 lg:w-8 rounded-lg text-destructive hover:bg-destructive/10 transition-colors shrink-0"
-                      aria-label={`Delete ${doc.filename}`}
+                      aria-label={`${t.delete} ${doc.filename}`}
                     >
                       <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                     </button>
@@ -275,9 +280,9 @@ export function Documents() {
       <Dialog open={!!docToDelete} onOpenChange={(o) => !o && !deleting && setDocToDelete(null)}>
         <DialogContent className="rounded-2xl p-4 sm:p-6 gap-0">
           <DialogHeader className="p-0">
-            <DialogTitle className="text-[15px] font-semibold text-left">Delete file?</DialogTitle>
+            <DialogTitle className="text-[15px] font-semibold text-left">{t.deleteFile}</DialogTitle>
             <DialogDescription className="mt-1.5">
-              <span className="font-medium text-foreground">{docToDelete?.filename}</span> will be permanently deleted.
+              <span className="font-medium text-foreground">{docToDelete?.filename}</span> {t.deleteFileConfirm}
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-end gap-2 mt-6">
@@ -285,7 +290,7 @@ export function Documents() {
               onClick={() => setDocToDelete(null)}
               className="px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-muted-foreground hover:bg-secondary transition-colors"
             >
-              No
+              {t.no}
             </button>
             <button
               onClick={handleDelete}
@@ -293,7 +298,7 @@ export function Documents() {
               className="flex items-center gap-1.5 px-4 py-1.5 min-h-11 sm:min-h-0 rounded-lg text-[12px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting ? t.deleting : t.delete}
             </button>
           </div>
         </DialogContent>

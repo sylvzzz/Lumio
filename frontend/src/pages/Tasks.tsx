@@ -5,22 +5,26 @@ import { useTasks } from '@/hooks/use-tasks'
 import { api, type Task } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+import { useT, useLang } from '@/hooks/useUser'
+import { tasksRemainingLabel, tasksCompletedLabel } from '@/i18n'
 
 type Filter = 'all' | 'active' | 'done'
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'done', label: 'Done' },
-]
-
 export function Tasks() {
   const shouldReduceMotion = useReducedMotion()
+  const t = useT()
+  const lang = useLang()
   const { data: tasks, isLoading } = useTasks()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<Filter>('all')
   const [input, setInput] = useState('')
   const [adding, setAdding] = useState(false)
+
+  const filters = [
+    { key: 'all' as Filter, label: t.filterAll },
+    { key: 'active' as Filter, label: t.filterActive },
+    { key: 'done' as Filter, label: t.filterDone },
+  ]
 
   const activeCount = (tasks ?? []).filter((t) => !t.done).length
   const doneCount = (tasks ?? []).length - activeCount
@@ -79,8 +83,8 @@ export function Tasks() {
 
   return (
     <div className="max-w-3xl mx-auto animate-fade-in">
-      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground mb-1">Tasks</h1>
-      <p className="text-muted-foreground text-sm mb-6 sm:mb-8">Keep track of what matters.</p>
+      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground mb-1">{t.tasksTitle}</h1>
+      <p className="text-muted-foreground text-sm mb-6 sm:mb-8">{t.tasksSubtitle}</p>
 
       {isLoading ? (
         <div className="bg-card/50 rounded-2xl border border-border/20 p-6 animate-pulse">
@@ -99,10 +103,10 @@ export function Tasks() {
           <div className="p-4 sm:p-6 pb-0 flex flex-col gap-4 sm:gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2.5">
               <CheckSquare className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
-              <h2 className="text-[15px] font-semibold tracking-tight">Your tasks</h2>
+              <h2 className="text-[15px] font-semibold tracking-tight">{t.yourTasks}</h2>
             </div>
             <div className="inline-flex items-center gap-1 bg-secondary/60 rounded-xl p-1 self-start sm:self-auto">
-              {FILTERS.map((f) => (
+              {filters.map((f) => (
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
@@ -128,7 +132,7 @@ export function Tasks() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Add a task..."
+                placeholder={t.addTaskPlaceholder}
                 className="flex-1 min-w-0 bg-secondary/50 rounded-xl border border-border/50 px-4 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30 transition-shadow"
               />
               <motion.button
@@ -139,7 +143,7 @@ export function Tasks() {
                 whileTap={{ scale: 0.97 }}
               >
                 <Plus className="w-4 h-4" strokeWidth={1.5} />
-                Add
+                {t.add}
               </motion.button>
             </div>
           </div>
@@ -147,10 +151,10 @@ export function Tasks() {
           <div className="px-4 sm:px-6 pb-2">
             <div className="flex items-center justify-between border-t border-border/30 pt-4 mb-1">
               <p className="text-[12px] font-medium text-muted-foreground">
-                {activeCount > 0 ? `${activeCount} remaining` : 'All done'}
+                {activeCount > 0 ? tasksRemainingLabel(lang, activeCount) : t.allDone}
               </p>
               {doneCount > 0 && (
-                <p className="text-[12px] text-muted-foreground/70">{doneCount} completed</p>
+                <p className="text-[12px] text-muted-foreground/70">{tasksCompletedLabel(lang, doneCount)}</p>
               )}
             </div>
           </div>
@@ -160,14 +164,14 @@ export function Tasks() {
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
                 <CheckCircle2 className="w-8 h-8 text-muted-foreground/30" strokeWidth={1} />
                 <p className="text-[13px] font-medium text-foreground">
-                  {tasks?.length === 0 ? 'No tasks yet' : 'Nothing here'}
+                  {tasks?.length === 0 ? t.noTasksYet : t.nothingHere}
                 </p>
                 <p className="text-[12px] text-muted-foreground">
                   {tasks?.length === 0
-                    ? 'Add your first task to get started.'
+                    ? t.addFirstTask
                     : filter === 'done'
-                      ? 'No completed tasks yet.'
-                      : 'You\'re all caught up.'}
+                      ? t.noCompletedTasks
+                      : t.tasksCaughtUp}
                 </p>
               </div>
             ) : (
@@ -241,7 +245,7 @@ export function Tasks() {
                       </motion.button>
                       <motion.button
                         onClick={() => deleteTask(task.id)}
-                        aria-label="Delete task"
+                        aria-label={t.deleteTask}
                         className="h-11 w-11 lg:h-7 lg:w-7 flex items-center justify-center rounded-lg text-muted-foreground/50 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:text-destructive hover:bg-destructive/5 transition-all"
                         whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
                       >

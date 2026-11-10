@@ -6,12 +6,8 @@ import { EventDetail } from '@/components/EventDetail'
 import { EventDialog } from '@/components/EventDialog'
 import { cn } from '@/lib/utils'
 import type { CalendarEvent } from '@/lib/api'
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
+import { useT, useLang } from '@/hooks/useUser'
+import { localeOf, weekdayShorts, type TextKey } from '@/i18n'
 
 function startOfDay(d: Date) {
   const copy = new Date(d)
@@ -33,33 +29,45 @@ function isSameDay(a: Date, b: Date) {
   return dateKey(a) === dateKey(b)
 }
 
-function formatTime(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+interface CalTexts {
+  formatTime: (iso: string) => string
+  timeRange: (event: CalendarEvent) => string
+  dayLabel: (d: Date) => string
 }
 
-function timeRange(event: CalendarEvent) {
-  if (event.all_day) return 'All day'
-  const start = new Date(event.start_time)
-  const end = new Date(event.end_time)
-  if (isSameDay(start, end)) {
-    return `${formatTime(event.start_time)} – ${formatTime(event.end_time)}`
+function makeTexts(locale: string, t: Record<TextKey, string>): CalTexts {
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true })
+  return {
+    formatTime,
+    timeRange: (event) => {
+      if (event.all_day) return t.allDay
+      const start = new Date(event.start_time)
+      const end = new Date(event.end_time)
+      if (isSameDay(start, end)) {
+        return `${formatTime(event.start_time)} – ${formatTime(event.end_time)}`
+      }
+      const short = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+      return `${short(start)} – ${short(end)}`
+    },
+    dayLabel: (d) => {
+      const diff = Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86400000)
+      if (diff === 0) return t.today
+      if (diff === 1) return t.tomorrow
+      if (diff === -1) return t.yesterday
+      return d.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })
+    },
   }
-  const short = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  return `${short(start)} – ${short(end)}`
-}
-
-function dayLabel(d: Date) {
-  const diff = Math.round((startOfDay(d).getTime() - startOfDay(new Date()).getTime()) / 86400000)
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  if (diff === -1) return 'Yesterday'
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
 export function Calendar() {
   const shouldReduceMotion = useReducedMotion()
+  const t = useT()
+  const lang = useLang()
+  const locale = localeOf(lang)
+  const dayNames = weekdayShorts(lang)
   const { data: events, isLoading } = useCalendarEvents()
+  const cal = makeTexts(locale, t)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -105,7 +113,7 @@ export function Calendar() {
       const key = dateKey(new Date(event.start_time))
       const last = groups[groups.length - 1]
       if (last && last.key === key) last.events.push(event)
-      else groups.push({ key, label: dayLabel(new Date(event.start_time)), events: [event] })
+      else groups.push({ key, label: cal.dayLabel(new Date(event.start_time)), events: [event] })
     }
     return groups
   }, [events, today])
@@ -135,14 +143,15 @@ export function Calendar() {
     setDialogOpen(true)
   }
 
-  const monthLabel = `${MONTH_NAMES[viewDate.getMonth()]} ${viewDate.getFullYear()}`
+  const monthLabel = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1)
+    .toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Calendar</h1>
-          <p className="text-muted-foreground text-sm mt-1">Your schedule at a glance.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">{t.calendarTitle}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t.calendarSubtitle}</p>
         </div>
         <motion.button
           onClick={() => openCreateDialog(null)}
@@ -151,7 +160,7 @@ export function Calendar() {
           whileTap={{ scale: 0.97 }}
         >
           <Plus className="w-4 h-4" strokeWidth={1.5} />
-          New Event
+          {t.newEvent}
         </motion.button>
       </div>
 
@@ -183,18 +192,18 @@ export function Calendar() {
                     onClick={goToday}
                     className="hidden sm:block rounded-lg border border-border/50 bg-card px-3 py-1.5 text-[12px] font-medium text-foreground shadow-sm hover:bg-muted/60 active:scale-95 transition-all"
                   >
-                    Today
+                    {t.today}
                   </button>
                   <button
                     onClick={goPrev}
-                    aria-label="Previous month"
+                    aria-label={t.prevMonth}
                     className="h-11 w-11 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
                   >
                     <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={goNext}
-                    aria-label="Next month"
+                    aria-label={t.nextMonth}
                     className="h-11 w-11 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
                   >
                     <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
@@ -216,7 +225,7 @@ export function Calendar() {
               </div>
 
               <div className="grid grid-cols-7 border-b border-border/30">
-                {DAY_NAMES.map((name) => (
+                {dayNames.map((name) => (
                   <div
                     key={name}
                     className="py-2 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
@@ -285,7 +294,7 @@ export function Calendar() {
                             ))}
                             {moreCount > 0 && (
                               <p className="px-1.5 text-[10px] font-medium text-muted-foreground">
-                                +{moreCount} more
+                                +{moreCount} {t.more}
                               </p>
                             )}
                           </div>
@@ -302,14 +311,14 @@ export function Calendar() {
             <div className="bg-card rounded-2xl border border-border/30 shadow-sm p-4 sm:p-6">
               <div className="flex items-center gap-2.5 mb-5">
                 <CalendarIcon className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.5} />
-                <h2 className="text-[15px] font-semibold tracking-tight">Upcoming</h2>
+                <h2 className="text-[15px] font-semibold tracking-tight">{t.upcoming}</h2>
               </div>
 
               {upcoming.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8 text-center">
                   <CalendarIcon className="w-8 h-8 text-muted-foreground/30" strokeWidth={1} />
-                  <p className="text-[13px] font-medium text-foreground">Nothing scheduled</p>
-                  <p className="text-[12px] text-muted-foreground">You're all caught up.</p>
+                  <p className="text-[13px] font-medium text-foreground">{t.nothingScheduled}</p>
+                  <p className="text-[12px] text-muted-foreground">{t.calendarCaughtUp}</p>
                 </div>
               ) : (
                 <motion.div
@@ -345,7 +354,7 @@ export function Calendar() {
                             />
                             <div className="min-w-0 flex-1">
                               <p className="text-[13px] font-medium text-foreground truncate">{event.title}</p>
-                              <p className="text-[11px] text-muted-foreground mt-0.5">{timeRange(event)}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">{cal.timeRange(event)}</p>
                             </div>
                           </motion.button>
                         ))}

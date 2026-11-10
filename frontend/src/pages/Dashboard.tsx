@@ -3,10 +3,15 @@ import { motion } from 'framer-motion'
 import { Calendar, CheckSquare, FileText, StickyNote } from 'lucide-react'
 import { api, type CalendarEvent, type Task, type Note, type Document } from '@/lib/api'
 import { Link } from 'react-router-dom'
-
-const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+import { useT, useLang } from '@/hooks/useUser'
+import { localeOf, weekdayShorts } from '@/i18n'
 
 export function Dashboard() {
+  const t = useT()
+  const lang = useLang()
+  const locale = localeOf(lang)
+  const weekDays = weekdayShorts(lang)
+
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [notes, setNotes] = useState<Note[]>([])
@@ -50,7 +55,7 @@ export function Dashboard() {
 
   const formatTime = (iso: string) => {
     try {
-      return new Date(iso).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+      return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
     } catch {
       return ''
     }
@@ -76,11 +81,11 @@ export function Dashboard() {
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-orange-500" />
               <h2 className="font-medium text-sm">
-                {today.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+                {today.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
               </h2>
             </div>
             <Link to="/calendar" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Ver calendário
+              {t.viewCalendar}
             </Link>
           </div>
           <div className="p-3">
@@ -116,7 +121,7 @@ export function Dashboard() {
             </div>
             {todayEvents.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
-                <p className="text-[11px] text-muted-foreground mb-1">Eventos hoje</p>
+                <p className="text-[11px] text-muted-foreground mb-1">{t.todaysEvents}</p>
                 {todayEvents.slice(0, 2).map((event) => (
                   <div key={event.id} className="flex items-center gap-2 text-[11px]">
                     <div className="w-0.5 h-3 rounded-full" style={{ backgroundColor: event.color || '#f97316' }} />
@@ -138,17 +143,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between p-3 border-b border-border/50">
             <div className="flex items-center gap-2">
               <CheckSquare className="w-4 h-4 text-green-500" />
-              <h2 className="font-medium text-sm">Tarefas pendentes</h2>
+              <h2 className="font-medium text-sm">{t.pendingTasks}</h2>
             </div>
             <Link to="/tasks" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Ver tudo
+              {t.viewAll}
             </Link>
           </div>
           <div className="p-3 space-y-0.5">
             {pendingTasks.length === 0 ? (
               <div className="text-center py-6">
                 <CheckSquare className="w-7 h-7 text-muted-foreground/50 mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Sem tarefas pendentes</p>
+                <p className="text-xs text-muted-foreground">{t.noPendingTasks}</p>
               </div>
             ) : (
               pendingTasks.map((task) => (
@@ -172,17 +177,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between p-3 border-b border-border/50">
             <div className="flex items-center gap-2">
               <StickyNote className="w-4 h-4 text-accent" />
-              <h2 className="font-medium text-sm">Notas recentes</h2>
+              <h2 className="font-medium text-sm">{t.recentNotes}</h2>
             </div>
             <Link to="/notes" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Ver tudo
+              {t.viewAll}
             </Link>
           </div>
           <div className="p-3 space-y-1">
             {recentNotes.length === 0 ? (
               <div className="text-center py-5">
                 <StickyNote className="w-7 h-7 text-muted-foreground/50 mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Sem notas</p>
+                <p className="text-xs text-muted-foreground">{t.noNotes}</p>
               </div>
             ) : (
               recentNotes.map((note) => (
@@ -205,17 +210,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between p-3 border-b border-border/50">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-red-500" />
-              <h2 className="font-medium text-sm">Documentos recentes</h2>
+              <h2 className="font-medium text-sm">{t.recentDocuments}</h2>
             </div>
             <Link to="/documents" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Ver tudo
+              {t.viewAll}
             </Link>
           </div>
           <div className="p-3 space-y-0.5">
             {recentDocs.length === 0 ? (
               <div className="text-center py-5">
                 <FileText className="w-7 h-7 text-muted-foreground/50 mx-auto mb-1" />
-                <p className="text-xs text-muted-foreground">Sem documentos</p>
+                <p className="text-xs text-muted-foreground">{t.noDocuments}</p>
               </div>
             ) : (
               recentDocs.map((doc) => (
