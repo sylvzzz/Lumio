@@ -2,16 +2,10 @@ import { NavLink } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useUser } from '@/hooks/useUser'
 import {
-  Bot,
-  Home,
-  Calendar,
-  StickyNote,
-  FileText,
-  Inbox,
-  CheckSquare,
-  Settings,
-  HelpCircle,
+  Bot, Home, Calendar, StickyNote, FileText, Inbox,
+  CheckSquare, Settings, HelpCircle, LogOut,
 } from 'lucide-react'
+import { api } from '@/lib/api'   // ajusta o caminho
 
 interface SidebarContentProps {
   onNavigate?: () => void
@@ -78,6 +72,20 @@ export function SidebarContent({ onNavigate }: SidebarContentProps) {
             </NavLink>
           </motion.div>
         ))}
+        <motion.div
+          initial={shouldReduceMotion ? {} : { opacity: 0, x: -12 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: navItems.length * 0.03, ease: [0.42, 0, 0.58, 1] }}
+        >
+          <button
+            type="button"
+            onClick={() => api.auth.logout()}
+            className="w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-xl text-[13px] text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={1.5} />
+            <span>{language === 'pt' ? 'Terminar sessão' : 'Log out'}</span>
+          </button>
+        </motion.div>
       </nav>
 
       <div className="p-4 pb-[calc(1rem_+_env(safe-area-inset-bottom))] lg:pb-4">

@@ -1,13 +1,27 @@
 const API_BASE = '/api'
 
+function redirectToLogin(): never {
+  window.location.href = `${API_BASE}/login`
+  throw new Error('unauthorized')
+}
+
+async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const res = await fetch(`${API_BASE}${url}`, {
+    credentials: 'same-origin',
+    ...init,
+  })
+  if (res.status === 401) redirectToLogin()
+  return res
+}
+
 async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`)
+  const res = await apiFetch(url)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json()
 }
 
 async function mutate<T>(url: string, method: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, {
+  const res = await apiFetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
@@ -126,7 +140,19 @@ export interface ChatSendResponse {
   ai_response: ChatMessage
 }
 
+export interface AuthUser {
+  email: string
+  name?: string
+}
+
 export const api = {
+  auth: {
+    me: () => fetchJSON<AuthUser>('/me'),
+    logout: async () => {
+      await apiFetch('/logout', { method: 'POST' })
+      window.location.href = `${API_BASE}/login`
+    },
+  },
   notes: {
     list: () => fetchJSON<Note[]>('/notes/'),
     get: (id: string) => fetchJSON<Note>(`/notes/${id}/`),
@@ -166,6 +192,7 @@ export const api = {
           }
         }
         xhr.onload = () => {
+          if (xhr.status === 401) return redirectToLogin()
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               resolve(JSON.parse(xhr.responseText) as Document)
@@ -190,7 +217,7 @@ export const api = {
       timezone: string | undefined,
       handlers: ChatStreamHandlers,
     ) => {
-      const res = await fetch(`${API_BASE}/chat-messages/stream/`, {
+      const res = await apiFetch('/chat-messages/stream/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session, content, role: 'user', timezone }),

@@ -18,6 +18,8 @@ import { Intro } from '@/pages/Intro'
 import { useUser } from '@/hooks/useUser'
 import { UserOnboarding } from '@/components/UserOnboarding'
 import { Toaster } from '@/components/ui/sonner'
+import AuthGate from './pages/AuthGate'
+import { AuthError } from '@/pages/AuthError'
 
 const queryClient = new QueryClient()
 
@@ -76,6 +78,12 @@ function Root() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Root />
+    {window.location.pathname === '/auth-error' ? (
+      <AuthError />
+    ) : (
+      <AuthGate>
+        <Root />
+      </AuthGate>
+    )}
   </StrictMode>,
 )

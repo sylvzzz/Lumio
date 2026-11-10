@@ -19,17 +19,23 @@ from src.logger import FatalError
 from src.models import MinimalSource
 from src.rag import RAG
 
+from authlib.integrations.starlette_client import OAuth
+from starlette.middleware.sessions import SessionMiddleware
+from fastapi import Request
+from fastapi.responses import JSONResponse, RedirectResponse
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# authorized mails, app is single user currently
+ALLOWED_EMAILS = {e.strip().lower() for e in os.environ["ALLOWED_EMAILS"].split(",")}
+OAUTH_REDIRECT_URI = os.environ["OAUTH_REDIRECT_URI"]
+PUBLIC_PATHS = {"/login", "/auth/callback", "/status"} 
+
 ALLOWED_SUFFIXES = (".pdf", ".docx", ".md", ".txt")
 
 app = FastAPI(title="Lumio RAG")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 class PrefixMiddleware(BaseHTTPMiddleware):
@@ -41,7 +47,24 @@ class PrefixMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-app.add_middleware(PrefixMiddleware)
+class AuthGateMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in PUBLIC_PATHS or request.session.get("user"):
+            return await call_next(request)
+        if "text/html" in request.headers.get("accept", ""):
+            return RedirectResponse("/api/login")   # navegação direta no browser
+        return JSONResponse({"detail": "unauthorized"}, status_code=401)
+
+app.add_middleware(AuthGateMiddleware)   # mais interior
+app.add_middleware(PrefixMiddleware)     # (a tua classe existente)
+app.add_middleware(
+    SessionMiddleware,                   # mais exterior
+    secret_key=os.environ["SESSION_SECRET"],
+    https_only=os.getenv("DEV") != "1",
+    same_site="lax",
+    max_age=12 * 3600,
+)
+
 
 rag = RAG()
 
@@ -94,6 +117,46 @@ class UserProfile(BaseModel):
 class ApiKeyConfig(BaseModel):
     provider: str
     api_key: str
+
+
+# AUTH
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_id=os.environ["GOOGLE_CLIENT_ID"],
+    client_secret=os.environ["GOOGLE_CLIENT_SECRET"],
+    client_kwargs={"scope": "openid email profile"},
+)
+
+@app.get("/login")
+async def login(request: Request):
+    return await oauth.google.authorize_redirect(request, OAUTH_REDIRECT_URI)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception:
+        return RedirectResponse("/auth-error?reason=failed")
+    info = token.get("userinfo") or {}
+    email = (info.get("email") or "").lower()
+    if not info.get("email_verified") or email not in ALLOWED_EMAILS:
+        return RedirectResponse("/auth-error?reason=not_found")
+    request.session.clear()
+    request.session["user"] = {"email": email, "name": info.get("name")}
+    return RedirectResponse("/")
+
+@app.get("/me")
+def me(request: Request) -> dict:
+    return request.session["user"]
+
+@app.post("/logout")
+def logout(request: Request) -> dict:
+    request.session.clear()
+    return {}
+
 
 
 def _ensure_data_dir() -> None:
