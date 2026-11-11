@@ -16,6 +16,10 @@ services:
       - lumio
     volumes:
       - ./lumio/data/backend:/app/data
+    secrets:
+      - db_name
+      - db_user
+      - db_password
     depends_on:
       - database
 

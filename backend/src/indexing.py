@@ -19,7 +19,7 @@ def _search_text(chunk: MinimalSource) -> str:
     return f"{name}\n{chunk.content}"
 
 
-def index_chunks(chunks: list[MinimalSource]) -> None:
+def index_chunks(chunks: list[MinimalSource], index_dir: str = INDEX_DIR) -> None:
     """Tokenize the chunks and build/save a bm25l index.
 
     The file name is indexed too, so queries such as "cv" match a file
@@ -27,12 +27,13 @@ def index_chunks(chunks: list[MinimalSource]) -> None:
 
     Args:
         chunks: Chunks to index.
+        index_dir: Directory where the bm25 index is persisted.
 
     Raises:
-        OSError: If the index cannot be persisted under ``INDEX_DIR``.
+        OSError: If the index cannot be persisted under ``index_dir``.
     """
     texts = [_search_text(chunk) for chunk in chunks]
     tokens = bm25s.tokenize(texts, leave=True)
     bm25 = bm25s.BM25(method="bm25l", k1=1, b=0.5)
     bm25.index(tokens, leave_progress=True)
-    bm25.save(INDEX_DIR, leave_progress=True)
+    bm25.save(index_dir, leave_progress=True)

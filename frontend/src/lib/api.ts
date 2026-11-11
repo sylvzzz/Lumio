@@ -1,28 +1,30 @@
 const API_BASE = '/api'
+const LOGIN_URL = `${API_BASE}/login`   // confirma que este é o URL certo
 
 function redirectToLogin(): never {
-  window.location.href = `${API_BASE}/login`
+  window.location.href = LOGIN_URL
   throw new Error('unauthorized')
 }
 
-async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+async function apiFetch(
+  url: string,
+  init: RequestInit = {},
+  redirectOn401 = true,
+): Promise<Response> {
   const res = await fetch(`${API_BASE}${url}`, {
     credentials: 'same-origin',
     ...init,
   })
-  if (res.status === 401) redirectToLogin()
+  if (res.status === 401 && redirectOn401) {
+    window.location.href = LOGIN_URL
+  }
   return res
 }
 
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await apiFetch(url)
+async function fetchJSON<T>(url: string, redirectOn401 = true): Promise<T> {
+  const res = await apiFetch(url, {}, redirectOn401)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
-
-  /*{email: '@gmail.com', name: 'name'} */
-  const data = await res.json()
-  console.log(data)
-
-  return data
+  return res.json()
 }
 
 async function mutate<T>(url: string, method: string, body?: unknown): Promise<T> {
@@ -153,10 +155,13 @@ export interface AuthUser {
 
 export const api = {
   auth: {
-    me: () => fetchJSON<AuthUser>('/me'),
+    me: () => fetchJSON<AuthUser>('/me', false),
     logout: async () => {
-      await apiFetch('/logout', { method: 'POST' })
-      window.location.href = `${API_BASE}/login`
+      try {
+        await apiFetch('/logout', { method: 'POST' }, false)
+      } finally {
+        window.location.href = '/'
+      }
     },
   },
   notes: {

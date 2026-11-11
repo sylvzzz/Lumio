@@ -13,4 +13,5 @@ tqdm>=4.70.1
 authlib>=1.6.0
 python-dotenv>=1.1.0
 itsdangerous>=2.2.0
+psycopg[binary]>=3.2
 fire>=0.7.0

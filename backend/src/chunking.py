@@ -73,8 +73,8 @@ def _chunks_from_file(doc: Path,
     return results
 
 
-def create_chunks_for_text(chunk_size: int) -> List[MinimalSource]:
-    """Chunk every .txt/.md/.pdf/.docx file of the corpus."""
+def create_chunks_for_text(chunk_size: int, dirs=(RAW_DIR, FILES_DIR)) -> List[MinimalSource]:
+    """Chunk every .txt/.md/.pdf/.docx file under the given directories."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_overlap=0,
         chunk_size=chunk_size,
@@ -83,7 +83,7 @@ def create_chunks_for_text(chunk_size: int) -> List[MinimalSource]:
     )
     valid = {".txt", ".md", ".pdf", ".docx"}
     results: List[MinimalSource] = []
-    for base in (RAW_DIR, FILES_DIR):
+    for base in dirs:
         base_path = Path(base)
         if not base_path.exists():
             continue
@@ -93,10 +93,10 @@ def create_chunks_for_text(chunk_size: int) -> List[MinimalSource]:
     return results
 
 
-def create_chunks_for_code(chunk_size: int) -> List[MinimalSource]:
-    """Chunk every .py file of the corpus."""
+def create_chunks_for_code(chunk_size: int, dirs=(RAW_DIR, FILES_DIR)) -> List[MinimalSource]:
+    """Chunk every .py file under the given directories."""
     results: List[MinimalSource] = []
-    for base in (RAW_DIR, FILES_DIR):
+    for base in dirs:
         base_path = Path(base)
         if not base_path.exists():
             continue

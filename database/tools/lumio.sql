@@ -113,7 +113,7 @@ CREATE TABLE document_folders (
 -- ==========================================
 
 CREATE TABLE documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     folder UUID REFERENCES document_folders(id) ON DELETE SET NULL,
     filename TEXT NOT NULL,
@@ -251,3 +251,29 @@ CREATE POLICY document_folders_isolation ON document_folders
 FOR ALL
 USING (user_id = NULLIF(current_setting('app.user_id', TRUE), '')::UUID)
 WITH CHECK (user_id = NULLIF(current_setting('app.user_id', TRUE), '')::UUID);
+
+
+-- ==========================================
+-- LOGIN (SECURITY DEFINER)
+-- ==========================================
+-- Upsert-by-email used at the OAuth callback, before the session knows the
+-- user id. Runs as the schema owner, so RLS does not hide the users table.
+
+CREATE OR REPLACE FUNCTION lumio_login(p_email TEXT, p_google_id TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE uid UUID;
+BEGIN
+    INSERT INTO users (email, google_id)
+    VALUES (p_email, p_google_id)
+    ON CONFLICT (email) DO UPDATE
+        SET google_id = EXCLUDED.google_id
+    RETURNING id INTO uid;
+    RETURN uid;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION lumio_login(TEXT, TEXT) FROM PUBLIC;

@@ -30,7 +30,7 @@ SYSTEM_PROMPT_BASE = (
     "source you used. "
 )
 
-# Configured language of the user (from backend user.json) -> prompt wording.
+# Configured language of the user (users table) -> prompt wording.
 LANGUAGE_NAMES = {"pt": "Portuguese", "en": "English"}
 
 _QUESTION_LANG_PROMPT = "Answer in the same language as the user prompt."

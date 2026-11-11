@@ -11,9 +11,9 @@ import bm25s
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from .chunking import create_chunks_for_code, create_chunks_for_text
+from .chunking import RAW_DIR, FILES_DIR, create_chunks_for_code, create_chunks_for_text
 from .evaluate import report_recall
-from .indexing import INDEX_DIR, index_chunks
+from .indexing import index_chunks
 from .logger import FatalError, Logger
 from .models import (
     MinimalAnswer,
@@ -25,8 +25,6 @@ from .models import (
     AnsweredQuestion
 )
 from .qwen import Model
-
-CHUNKS_FILE = "data/processed/index.json"
 
 MIN_CHUNK_SIZE = 100
 MAX_CHUNK_SIZE = 2000
@@ -49,17 +47,29 @@ STOPWORDS = frozenset(
 
 
 class RAG:
-    """Retrieval-Augmented Generation pipeline."""
+    """Retrieval-Augmented Generation pipeline.
 
-    def __init__(self) -> None:
+    Cada instância tem ficheiros e índices próprios: por utilizador,
+    ``data/files/<user_id>`` + ``data/shared``; a instância global (sem
+    ``user_id``) mantém o comportamento original do corpus.
+    """
+
+    def __init__(self, user_id: str | None = None) -> None:
         """Set up the pipeline with a lazily-loaded index and sources."""
         self._bm25: bm25s.BM25 | None = None
         self._sources: List[MinimalSource] | None = None
         self._engine: Model | None = None
         self._engine_lock = threading.Lock()
+        scope = user_id or "global"
+        self.chunks_file = f"data/processed/{scope}/index.json"
+        self._index_dir = f"data/processed/{scope}/bm25"
+        if user_id:
+            self._dirs = (f"data/files/{user_id}", "data/shared")
+        else:
+            self._dirs = (RAW_DIR, FILES_DIR)
 
     def index(self, max_chunk_size: int = 2000) -> None:
-        """Chunk data/raw and build the index under data/processed/.
+        """Chunk this instance's directories and build its index.
 
         Args:
             max_chunk_size: Maximum characters per chunk, clamped to
@@ -70,20 +80,20 @@ class RAG:
         """
         size = self._clean_chunk_size(max_chunk_size)
         try:
-            text_chunks = create_chunks_for_text(size)
-            code_chunks = create_chunks_for_code(size)
+            text_chunks = create_chunks_for_text(size, self._dirs)
+            code_chunks = create_chunks_for_code(size, self._dirs)
         except RUNTIME_ERRORS as e:
             Logger.error(f"Could not read the corpus: {e}")
             raise FatalError from e
 
         total_chunks = [*text_chunks, *code_chunks]
         if not total_chunks:
-            Logger.error("No files found under data/raw/vllm-0.10.1.")
+            Logger.error(f"No files found under {self._dirs}.")
             raise FatalError
 
         self._save_chunks(total_chunks)
         try:
-            index_chunks(total_chunks)
+            index_chunks(total_chunks, self._index_dir)
         except RUNTIME_ERRORS as e:
             Logger.error(f"Indexing failed: {e}")
             raise FatalError from e
@@ -107,10 +117,10 @@ class RAG:
             Logger.error(f"Could not delete the file: {e}")
             raise FatalError from e
 
-        chunks_path = Path(CHUNKS_FILE)
+        chunks_path = Path(self.chunks_file)
         remaining: List[MinimalSource] = []
         if chunks_path.exists():
-            data = self._read_json(CHUNKS_FILE)
+            data = self._read_json(self.chunks_file)
             if isinstance(data, list):
                 for item in data:
                     try:
@@ -125,7 +135,7 @@ class RAG:
         if not remaining:
             try:
                 chunks_path.unlink(missing_ok=True)
-                shutil.rmtree(INDEX_DIR, ignore_errors=True)
+                shutil.rmtree(self._index_dir, ignore_errors=True)
             except OSError as e:
                 Logger.error(f"Could not clear the index: {e}")
                 raise FatalError from e
@@ -133,7 +143,7 @@ class RAG:
 
         try:
             self._save_chunks(remaining)
-            index_chunks(remaining)
+            index_chunks(remaining, self._index_dir)
         except RUNTIME_ERRORS as e:
             Logger.error(f"Indexing failed: {e}")
             raise FatalError from e
@@ -447,14 +457,14 @@ class RAG:
             FatalError: If the file cannot be written.
         """
         try:
-            path = Path(CHUNKS_FILE)
+            path = Path(self.chunks_file)
             path.parent.mkdir(exist_ok=True, parents=True)
-            with open(CHUNKS_FILE, mode="w") as file:
+            with open(self.chunks_file, mode="w") as file:
                 json.dump([m.model_dump() for m in chunks], file, indent=2)
         except OSError as e:
             Logger.error(f"Could not write the chunks: {e}")
             raise FatalError from e
-        Logger.success(f"Saving {len(chunks)} sources to {CHUNKS_FILE}...")
+        Logger.success(f"Saving {len(chunks)} sources to {self.chunks_file}...")
 
     @staticmethod
     def _answer_one(engine: Model,
@@ -567,7 +577,7 @@ class RAG:
         bm25 = self._bm25
         if bm25 is None:
             try:
-                bm25 = bm25s.BM25.load(INDEX_DIR)
+                bm25 = bm25s.BM25.load(self._index_dir)
             except RUNTIME_ERRORS as e:
                 Logger.error(f"Could not load the index: {e}")
                 raise FatalError from e
@@ -596,9 +606,9 @@ class RAG:
         """
         sources = self._sources
         if sources is None:
-            data = self._read_json(CHUNKS_FILE)
+            data = self._read_json(self.chunks_file)
             if not isinstance(data, list):
-                Logger.error(f"{CHUNKS_FILE} must contain a JSON list.")
+                Logger.error(f"{self.chunks_file} must contain a JSON list.")
                 raise FatalError
             sources = []
             for item in data:

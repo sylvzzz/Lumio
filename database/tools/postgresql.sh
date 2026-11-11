@@ -40,6 +40,17 @@ SQL
     -v ON_ERROR_STOP=1 \
     -f /docker-entrypoint-initdb.d/lumio.sql
 
+    echo "Granting privileges to app user ..."
+    PGPASSWORD="$DB_ADMIN_PASSWORD" psql \
+    -h localhost \
+    -U "$DB_ADMIN" \
+    -d "$DB_NAME" \
+    -v ON_ERROR_STOP=1 <<SQL
+GRANT USAGE ON SCHEMA public TO "$DB_USER";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "$DB_USER";
+GRANT EXECUTE ON FUNCTION lumio_login(TEXT, TEXT) TO "$DB_USER";
+SQL
+
     echo "Stopping temporary PostgreSQL server ..."
 
     su postgres -c "pg_ctl -D /var/lib/postgresql/data -m fast -w stop"

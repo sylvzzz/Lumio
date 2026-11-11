@@ -1,7 +1,9 @@
-"""FastAPI backend for Lumio (42-rag style, single-user local)."""
+"""FastAPI backend for Lumio (42-rag style, multi-user local)."""
 import json
 import os
 import re
+import shutil
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -13,10 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
-from src.chunking import FILES_DIR
-from src.chat import append_exchange, create_chat, get_chat, list_chats
+from src.db import DB
 from src.logger import FatalError
 from src.models import MinimalSource
+from src.qwen import Model
 from src.rag import RAG
 
 from authlib.integrations.starlette_client import OAuth
@@ -66,13 +68,62 @@ app.add_middleware(
 )
 
 
-rag = RAG()
-
 DATA_DIR = Path("data")
-NOTES_FILE = DATA_DIR / "notes.json"
-CALENDAR_FILE = DATA_DIR / "calendar.json"
-USER_FILE = DATA_DIR / "user.json"
-TASKS_FILE = DATA_DIR / "tasks.json"
+
+
+def _ensure_shared_knowledge() -> None:
+    """Repõe data/shared a partir da imagem (bind mount sombreia /app/data)."""
+    src = Path("data_src/shared")
+    if not src.is_dir():
+        return
+    dst = DATA_DIR / "shared"
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in src.iterdir():
+        if f.is_file() and not (dst / f.name).exists():
+            shutil.copy(f, dst / f.name)
+
+
+_ensure_shared_knowledge()
+
+
+# Cliente LLM partilhado por todos os utilizadores (não guarda estado por user).
+_engine: Model | None = None
+_engine_lock = threading.Lock()
+
+# Instância de RAG por utilizador: pastas e índices isolados.
+# ponytail: dicionário em memória sem expiração; evict LRU se houver muitos users.
+_rags: dict[str, RAG] = {}
+_rags_lock = threading.Lock()
+
+
+def _load_engine() -> Model:
+    global _engine
+    with _engine_lock:
+        if _engine is None:
+            _engine = Model()
+    return _engine
+
+
+def _rag(request: Request) -> RAG:
+    """RAG do utilizador; indexa os seus ficheiros na primeira utilização."""
+    uid = _uid(request)
+    with _rags_lock:
+        rag = _rags.get(uid)
+        if rag is None:
+            rag = RAG(uid)
+            try:
+                if not Path(rag.chunks_file).exists():
+                    rag.index()
+            except Exception:
+                pass
+            _rags[uid] = rag
+    return rag
+
+
+def _user_files_dir(request: Request) -> Path:
+    d = DATA_DIR / "files" / _uid(request)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
 
 
 class DeleteFileRequest(BaseModel):
@@ -144,8 +195,13 @@ async def auth_callback(request: Request):
     email = (info.get("email") or "").lower()
     if not info.get("email_verified") or email not in ALLOWED_EMAILS:
         return RedirectResponse("/auth-error?reason=not_found")
+    try:
+        with DB() as db:
+            user_id = db.login(email, info.get("sub"))
+    except Exception:
+        return RedirectResponse("/auth-error?reason=failed")
     request.session.clear()
-    request.session["user"] = {"email": email, "name": info.get("name")}
+    request.session["user"] = {"id": user_id, "email": email, "name": info.get("name")}
     return RedirectResponse("/")
 
 @app.get("/me")
@@ -159,23 +215,19 @@ def logout(request: Request) -> dict:
 
 
 
-def _ensure_data_dir() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    Path(FILES_DIR).mkdir(parents=True, exist_ok=True)
+def _uid(request: Request) -> str:
+    """User id da sessão; sessões pré-migração não o têm -> novo login."""
+    uid = request.session.get("user", {}).get("id")
+    if not uid:
+        raise HTTPException(status_code=401, detail="re-login required")
+    return uid
 
 
-def _load_json(path: Path, default: Any) -> Any:
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default
-
-
-def _save_json(path: Path, data: Any) -> None:
-    _ensure_data_dir()
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+def _user_lang(request: Request) -> str:
+    """Idioma configurado pelo utilizador (tabela users); 'pt' por omissão."""
+    with DB(_uid(request)) as db:
+        lang = (db.get_user() or {}).get("language") or DEFAULT_LANG
+    return lang if lang in _T else DEFAULT_LANG
 
 
 DEFAULT_LANG = "pt"
@@ -306,52 +358,49 @@ _T = {
 }
 
 
-def _user_lang() -> str:
-    """Idioma configurado pelo utilizador (user.json); 'pt' por omissão."""
-    lang = (_load_json(USER_FILE, {}) or {}).get("language") or DEFAULT_LANG
-    return lang if lang in _T else DEFAULT_LANG
-
-
-def _sync_notes_and_calendar_to_files() -> None:
-    _ensure_data_dir()
-    files_dir = Path(FILES_DIR)
-    files_dir.mkdir(parents=True, exist_ok=True)
-    notes = _load_json(NOTES_FILE, [])
+def _sync_notes_and_calendar_to_files(request: Request) -> None:
+    files_dir = _user_files_dir(request)
+    with DB(_uid(request)) as db:
+        notes = db.list_notes()
+        events = db.list_events()
+    keep = set()
     for n in notes:
-        note_id = n.get("id") or str(uuid.uuid4())
         content = n.get("content") or ""
         if not content.strip():
             continue
-        path = files_dir / f"note_{note_id}.txt"
+        path = files_dir / f"note_{n['id']}.txt"
+        keep.add(path.name)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
         with open(f"{path}.meta.json", "w", encoding="utf-8") as f:
             json.dump({"original_name": "Nota.txt"}, f)
-    events = _load_json(CALENDAR_FILE, [])
     for e in events:
-        ev_id = e.get("id") or str(uuid.uuid4())
         title = e.get("title") or ""
-        desc = e.get("description") or ""
-        start = e.get("start_time") or ""
-        end = e.get("end_time") or ""
-        all_day = e.get("all_day")
-        text = f"Evento: {title}\nDescrição: {desc}\nInício: {start}\nFim: {end}\nTodo o dia: {all_day}\n"
-        path = files_dir / f"event_{ev_id}.txt"
+        text = (f"Evento: {title}\nDescrição: {e.get('description')}\n"
+                f"Início: {e.get('start_time')}\nFim: {e.get('end_time')}\n"
+                f"Todo o dia: {e.get('all_day')}\n")
+        path = files_dir / f"event_{e['id']}.txt"
+        keep.add(path.name)
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
         with open(f"{path}.meta.json", "w", encoding="utf-8") as f:
             json.dump({"original_name": f"Evento - {title}.txt"}, f)
+    # Remove ficheiros gerados de notas/eventos já apagados.
+    for p in files_dir.iterdir():
+        if p.is_file() and p.name.startswith(_GENERATED_PREFIXES) and p.name not in keep:
+            p.unlink(missing_ok=True)
+            Path(f"{p}.meta.json").unlink(missing_ok=True)
 
 
-def _rebuild_index(max_chunk_size: int = 2000) -> None:
-    _sync_notes_and_calendar_to_files()
+def _rebuild_index(request: Request, max_chunk_size: int = 2000) -> None:
+    _sync_notes_and_calendar_to_files(request)
     try:
-        rag.index(max_chunk_size)
+        _rag(request).index(max_chunk_size)
     except Exception:
         pass
 
 
-def _save_upload(file: UploadFile) -> tuple[Path, str]:
+def _save_upload(request: Request, file: UploadFile) -> tuple[Path, str]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="File has no name")
 
@@ -361,22 +410,12 @@ def _save_upload(file: UploadFile) -> tuple[Path, str]:
             status_code=400, detail="Only .pdf, .docx, .md, .txt files are supported"
         )
 
-    files_dir = Path(FILES_DIR)
-    files_dir.mkdir(parents=True, exist_ok=True)
-    out_path = files_dir / f"{uuid.uuid4().hex}_{original}"
+    out_path = _user_files_dir(request) / f"{uuid.uuid4().hex}_{original}"
     with open(out_path, "wb") as f:
         f.write(file.file.read())
     with open(f"{out_path}.meta.json", "w", encoding="utf-8") as f:
         json.dump({"original_name": original}, f)
     return out_path, original
-
-
-@app.on_event("startup")
-async def startup_event():
-    try:
-        _rebuild_index()
-    except Exception:
-        pass
 
 
 @app.get("/status")
@@ -390,17 +429,19 @@ def root() -> dict[str, str]:
 
 
 @app.get("/chat-sessions/")
-def get_chat_sessions() -> list[dict]:
+def get_chat_sessions(request: Request) -> list[dict]:
+    with DB(_uid(request)) as db:
+        sessions = db.list_chats()
     result = []
-    for s in list_chats():
+    for s in sessions:
         chat_id = s.get("chat_id")
         if not chat_id:
             continue
-        history = (get_chat(chat_id) or {}).get("messages", [])
+        history = s.get("messages", [])
         result.append(
             {
                 "id": chat_id,
-                "title": s.get("title") or _T[_user_lang()]["new_chat"],
+                "title": s.get("title") or _T[_user_lang(request)]["new_chat"],
                 "messages": [
                     {**m, "id": m.get("id") or f"{chat_id}-{i}", "session": chat_id}
                     for i, m in enumerate(history)
@@ -413,27 +454,29 @@ def get_chat_sessions() -> list[dict]:
 
 
 @app.post("/chat-sessions/")
-def create_chat_session(body: dict) -> dict:
-    title = body.get("title") or _T[_user_lang()]["new_chat"]
-    chat = create_chat(title)
+def create_chat_session(request: Request, body: dict) -> dict:
+    title = body.get("title") or _T[_user_lang(request)]["new_chat"]
+    with DB(_uid(request)) as db:
+        chat = db.create_chat(title)
     return {**chat, "id": chat["chat_id"]}
 
 
 @app.post("/chat-messages/")
-def send_chat_message(req: ChatMessageReq) -> dict:
+def send_chat_message(req: ChatMessageReq, request: Request) -> dict:
     query = req.content
-    lang = _user_lang()
+    lang = _user_lang(request)
     history = []
-    chat = get_chat(req.session)
+    with DB(_uid(request)) as db:
+        chat = db.get_chat(req.session)
     if chat:
         for m in chat.get("messages", [])[-10:]:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        for_model, found = _model_sources(query, lang)
-        model_res = rag._load_engine().answer(query, for_model, history, lang)
+        for_model, found = _model_sources(request, query, lang)
+        model_res = _load_engine().answer(query, for_model, history, lang)
         answer = model_res.answer
-        sources = _used_sources(query, answer, found, lang)
+        sources = _used_sources(request, query, answer, found, lang)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -455,7 +498,9 @@ def send_chat_message(req: ChatMessageReq) -> dict:
         "created_at": now,
     }
     try:
-        append_exchange(req.session, {"role": "user", "content": query}, {"role": "assistant", "content": answer})
+        with DB(_uid(request)) as db:
+            db.append_exchange(req.session, query, answer,
+                               sources=[s.model_dump() for s in sources])
     except Exception:
         pass
 
@@ -516,10 +561,21 @@ def _fit(lines: list[str], budget: int, what: str, lang: str) -> list[str]:
     return out
 
 
-def _calendar_lines(today: datetime, lang: str) -> tuple[list[str], str]:
+def _to_aware(value: Any) -> datetime | None:
+    """Lê uma data ISO; valores sem fuso são interpretados na hora local."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=_LOCAL_TZ)
+
+
+def _calendar_lines(events: list[dict], today: datetime, lang: str) -> tuple[list[str], str]:
     lo, hi = today - timedelta(days=120), today + timedelta(days=400)
     rows = []
-    for e in _load_json(CALENDAR_FILE, []):
+    for e in events:
         s = _parse_dt(e.get("start_time"))
         if s is None:
             continue
@@ -546,31 +602,29 @@ def _calendar_lines(today: datetime, lang: str) -> tuple[list[str], str]:
     return lines, f"{lo:%d/%m/%Y} {_T[lang]['to']} {hi:%d/%m/%Y}"
 
 
-def _user_data_context(lang: str) -> MinimalSource:
+def _user_data_context(request: Request, lang: str) -> MinimalSource:
     t = _T[lang]
     now = _now_local()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    user = _load_json(USER_FILE, {}) or {}
+    with DB(_uid(request)) as db:
+        user = db.get_user() or {}
+        events = db.list_events()
+        tasks = db.list_tasks()
+        notes = db.list_notes()
+        docs = db.list_documents()
 
-    cal, cal_range = _calendar_lines(today, lang)
-    tasks = _load_json(TASKS_FILE, [])
+    cal, cal_range = _calendar_lines(events, today, lang)
     pending = [f"- [ ] {_one_line(t.get('title'), 120)}" for t in tasks if not t.get("done")]
     done = [f"- [x] {_one_line(t.get('title'), 120)}" for t in tasks if t.get("done")][-15:]
 
-    notes = sorted(_load_json(NOTES_FILE, []), key=lambda n: n.get("updated_at") or "", reverse=True)
+    notes = sorted(notes, key=lambda n: n.get("updated_at") or "", reverse=True)
     note_lines = []
     for n in notes:
         d = _parse_dt(n.get("updated_at"))
         note_lines.append(f"- ({d:%d/%m/%Y})" if d else "-")
         note_lines[-1] += f" {_one_line(n.get('content'), 300)}"
 
-    docs = []
-    try:
-        for p in sorted(Path(FILES_DIR).iterdir()):
-            if p.is_file() and not p.name.endswith(".meta.json") and not p.name.startswith(_GENERATED_PREFIXES):
-                docs.append(f"- {_original_name(p.name)}")
-    except OSError:
-        pass
+    doc_lines = [f"- {_one_line(d.get('filename'), 100)}" for d in docs]
 
     parts = [
         t["instructions"].format(name=f" ({user.get('name')})" if user.get("name") else ""),
@@ -582,7 +636,7 @@ def _user_data_context(lang: str) -> MinimalSource:
         t["notes_header"],
         *(_fit(note_lines, 2500, t["notes"], lang) or [t["no_notes"]]),
         t["docs_header"],
-        *(_fit(docs, 800, t["docs"], lang) or [t["no_docs"]]),
+        *(_fit(doc_lines, 800, t["docs"], lang) or [t["no_docs"]]),
     ]
     text = "\n".join(parts)
     return MinimalSource(file_path=_CONTEXT_PATH, first_character_index=0,
@@ -590,7 +644,7 @@ def _user_data_context(lang: str) -> MinimalSource:
 
 
 def _llm_text(system: str, user: str, max_tokens: int = 120) -> str:
-    engine = rag._load_engine()
+    engine = _load_engine()
     res = engine.client.chat.completions.create(
         model=engine.model_name,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -613,15 +667,15 @@ def _search_keywords(query: str, lang: str) -> str:
         return ""
 
 
-def _model_sources(query: str, lang: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
+def _model_sources(request: Request, query: str, lang: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
     """Devolve (fontes para o modelo, excertos encontrados na pesquisa)."""
     try:
         keywords = _search_keywords(query, lang)
-        found = rag.search(f"{query} {keywords}".strip(), 8).retrieved_sources
+        found = _rag(request).search(f"{query} {keywords}".strip(), 8).retrieved_sources
     except Exception:
         found = []
     found = [s for s in found if not Path(s.file_path).name.startswith("event_")][:5]
-    return [_user_data_context(lang)] + found, found
+    return [_user_data_context(request, lang)] + found, found
 
 
 # --- Fontes mostradas ao utilizador: só o que o modelo realmente usou ---------
@@ -631,7 +685,8 @@ _SOURCE_LABELS = {
 }
 
 
-def _used_sources(query: str, answer: str, found: list[MinimalSource], lang: str) -> list[MinimalSource]:
+def _used_sources(request: Request, query: str, answer: str,
+                  found: list[MinimalSource], lang: str) -> list[MinimalSource]:
     """Pergunta ao modelo que fontes sustentaram a resposta e devolve só essas.
 
     Falha em silêncio: se não for possível apurar, não se mostra nada
@@ -642,15 +697,19 @@ def _used_sources(query: str, answer: str, found: list[MinimalSource], lang: str
     try:
         t = _T[lang]
         labels = _SOURCE_LABELS.get(lang, _SOURCE_LABELS["en"])
+        with DB(_uid(request)) as db:
+            has_events = bool(db.list_events())
+            has_tasks = bool(db.list_tasks())
+            has_notes = bool(db.list_notes())
 
         # candidatos
         cands: dict[str, str] = {}
-        if _load_json(CALENDAR_FILE, []):
+        if has_events:
             cands["calendar"] = t["cand_calendar"]
-        if _load_json(TASKS_FILE, []):
+        if has_tasks:
             cands["tasks"] = t["cand_tasks"]
         note_chunks = [s for s in found if Path(s.file_path).name.startswith("note_")]
-        if _load_json(NOTES_FILE, []) or note_chunks:
+        if has_notes or note_chunks:
             extra = "; ".join(_one_line(s.content, 120) for s in note_chunks[:3])
             cands["notes"] = t["cand_notes"] + (f" (ex.: {extra})" if extra else "")
         doc_by_id: dict[str, list[MinimalSource]] = {}
@@ -662,7 +721,7 @@ def _used_sources(query: str, answer: str, found: list[MinimalSource], lang: str
             if key is None:
                 key = f"doc{len(doc_by_id) + 1}"
                 doc_by_id[key] = []
-                cands[key] = t["cand_doc"].format(name=_original_name(name), excerpt=_one_line(s.content, 250))
+                cands[key] = t["cand_doc"].format(name=_original_name(request, name), excerpt=_one_line(s.content, 250))
             doc_by_id[key].append(s)
         if not cands:
             return []
@@ -696,7 +755,7 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {payload}\n\n"
 
 
-def _source_files(sources: list) -> list[dict[str, str]]:
+def _source_files(request: Request, sources: list) -> list[dict[str, str]]:
     files = []
     seen = set()
     for source in sources:
@@ -705,23 +764,24 @@ def _source_files(sources: list) -> list[dict[str, str]]:
         if not name or name in seen:
             continue
         seen.add(name)
-        files.append({"document_id": name, "name": _original_name(name)})
+        files.append({"document_id": name, "name": _original_name(request, name)})
     return files
 
 
 @app.post("/chat-messages/stream/")
-def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
+def stream_chat_message(req: ChatMessageReq, request: Request) -> StreamingResponse:
     query = req.content
-    lang = _user_lang()
+    lang = _user_lang(request)
     history = []
-    chat = get_chat(req.session)
+    with DB(_uid(request)) as db:
+        chat = db.get_chat(req.session)
     if chat:
         for m in chat.get("messages", [])[-10:]:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        for_model, found = _model_sources(query, lang)
-        tokens = rag._load_engine().answer_stream(query, for_model, history, lang)
+        for_model, found = _model_sources(request, query, lang)
+        tokens = _load_engine().answer_stream(query, for_model, history, lang)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -736,8 +796,8 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             return
 
         answer = "".join(parts).strip()
-        sources = _used_sources(query, answer, found, lang)
-        yield _sse("sources", {"files": _source_files(sources)})
+        sources = _used_sources(request, query, answer, found, lang)
+        yield _sse("sources", {"files": _source_files(request, sources)})
         now = datetime.utcnow().isoformat() + "Z"
         user_msg = {
             "id": str(uuid.uuid4()),
@@ -756,10 +816,11 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             "created_at": now,
         }
         try:
-            append_exchange(
-                req.session, query, answer,
-                sources=[s.model_dump() for s in sources],
-            )
+            with DB(_uid(request)) as db:
+                db.append_exchange(
+                    req.session, query, answer,
+                    sources=[s.model_dump() for s in sources],
+                )
         except Exception:
             pass
         yield _sse("done", {"user": user_msg, "ai_response": ai_msg})
@@ -775,154 +836,119 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
 
 
 @app.get("/notes/")
-def list_notes() -> list[dict]:
-    notes = _load_json(NOTES_FILE, [])
-    for n in notes:
-        if "id" not in n:
-            n["id"] = str(uuid.uuid4())
-    _save_json(NOTES_FILE, notes)
-    return notes
+def list_notes(request: Request) -> list[dict]:
+    with DB(_uid(request)) as db:
+        return db.list_notes()
 
 
 @app.post("/notes/")
-def create_note(note: NoteCreate) -> dict:
-    notes = _load_json(NOTES_FILE, [])
-    now = datetime.utcnow().isoformat() + "Z"
-    n = {
-        "id": str(uuid.uuid4()),
-        "content": note.content,
-        "is_pinned": False,
-        "created_at": now,
-        "updated_at": now,
-    }
-    notes.append(n)
-    _save_json(NOTES_FILE, notes)
-    _rebuild_index()
+def create_note(request: Request, note: NoteCreate) -> dict:
+    with DB(_uid(request)) as db:
+        n = db.create_note(note.content)
+    _rebuild_index(request)
     return n
 
 
 @app.patch("/notes/{note_id}/")
-def update_note(note_id: str, note: NoteUpdate) -> dict:
-    notes = _load_json(NOTES_FILE, [])
-    now = datetime.utcnow().isoformat() + "Z"
-    for n in notes:
-        if n.get("id") == note_id:
-            n["content"] = note.content
-            n["updated_at"] = now
-            _save_json(NOTES_FILE, notes)
-            _rebuild_index()
-            return n
-    raise HTTPException(status_code=404, detail="Note not found")
+def update_note(note_id: str, note: NoteUpdate, request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        n = db.update_note(note_id, note.content)
+    if n is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    _rebuild_index(request)
+    return n
 
 
 @app.delete("/notes/{note_id}/")
-def delete_note(note_id: str) -> dict:
-    notes = _load_json(NOTES_FILE, [])
-    notes = [n for n in notes if n.get("id") != note_id]
-    _save_json(NOTES_FILE, notes)
-    _rebuild_index()
+def delete_note(note_id: str, request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        db.delete_note(note_id)
+    _rebuild_index(request)
     return {}
 
 
 @app.get("/tasks/")
-def list_tasks() -> list[dict]:
-    tasks = _load_json(TASKS_FILE, [])
-    return tasks
+def list_tasks(request: Request) -> list[dict]:
+    with DB(_uid(request)) as db:
+        return db.list_tasks()
 
 
 @app.post("/tasks/")
-def create_task(body: dict) -> dict:
-    tasks = _load_json(TASKS_FILE, [])
-    now = datetime.utcnow().isoformat() + "Z"
-    t = {
-        "id": str(uuid.uuid4()),
-        "title": body.get("title", ""),
-        "done": False,
-        "created_at": now,
-        "updated_at": now,
-    }
-    tasks.append(t)
-    _save_json(TASKS_FILE, tasks)
-    return t
+def create_task(request: Request, body: dict) -> dict:
+    with DB(_uid(request)) as db:
+        return db.create_task(body.get("title", ""))
 
 
 @app.patch("/tasks/{task_id}/")
-def update_task(task_id: str, body: dict) -> dict:
-    tasks = _load_json(TASKS_FILE, [])
-    for t in tasks:
-        if t.get("id") == task_id:
-            t.update(body)
-            _save_json(TASKS_FILE, tasks)
-            return t
-    raise HTTPException(status_code=404, detail="Task not found")
+def update_task(task_id: str, body: dict, request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        t = db.update_task(task_id, body)
+    if t is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return t
 
 
 @app.delete("/tasks/{task_id}/")
-def delete_task(task_id: str) -> dict:
-    tasks = _load_json(TASKS_FILE, [])
-    tasks = [t for t in tasks if t.get("id") != task_id]
-    _save_json(TASKS_FILE, tasks)
+def delete_task(task_id: str, request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        db.delete_task(task_id)
     return {}
 
 
 @app.get("/calendar-events/")
-def list_calendar_events() -> list[dict]:
-    events = _load_json(CALENDAR_FILE, [])
-    return events
+def list_calendar_events(request: Request) -> list[dict]:
+    with DB(_uid(request)) as db:
+        return db.list_events()
 
 
 @app.post("/calendar-events/")
-def create_calendar_event(ev: CalendarEventCreate) -> dict:
-    events = _load_json(CALENDAR_FILE, [])
-    e = {
-        "id": str(uuid.uuid4()),
-        "title": ev.title,
-        "description": ev.description or "",
-        "start_time": ev.start_time,
-        "end_time": ev.end_time,
-        "all_day": ev.all_day,
-        "color": ev.color,
-    }
-    events.append(e)
-    _save_json(CALENDAR_FILE, events)
-    _rebuild_index()
+def create_calendar_event(ev: CalendarEventCreate, request: Request) -> dict:
+    start = _to_aware(ev.start_time)
+    if start is None:
+        raise HTTPException(status_code=400, detail="Invalid start_time")
+    end = _to_aware(ev.end_time) or start
+    if end < start:
+        raise HTTPException(status_code=400, detail="end_time before start_time")
+    with DB(_uid(request)) as db:
+        e = db.create_event({
+            "title": ev.title,
+            "description": ev.description,
+            "start_time": start,
+            "end_time": end,
+            "all_day": ev.all_day,
+            "color": ev.color,
+        })
+    _rebuild_index(request)
     return e
 
 
 @app.patch("/calendar-events/{event_id}/")
-def update_calendar_event(event_id: str, ev: dict) -> dict:
-    events = _load_json(CALENDAR_FILE, [])
-    for e in events:
-        if e.get("id") == event_id:
-            e.update(ev)
-            _save_json(CALENDAR_FILE, events)
-            _rebuild_index()
-            return e
-    raise HTTPException(status_code=404, detail="Event not found")
+def update_calendar_event(event_id: str, ev: dict, request: Request) -> dict:
+    fields = {k: ev[k] for k in ("title", "description", "color", "all_day") if k in ev}
+    for k in ("start_time", "end_time"):
+        if k in ev:
+            dt = _to_aware(ev[k])
+            if dt is None:
+                raise HTTPException(status_code=400, detail=f"Invalid {k}")
+            fields[k] = dt
+    with DB(_uid(request)) as db:
+        e = db.update_event(event_id, fields)
+    if e is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    _rebuild_index(request)
+    return e
 
 
 @app.delete("/calendar-events/{event_id}/")
-def delete_calendar_event(event_id: str) -> dict:
-    events = _load_json(CALENDAR_FILE, [])
-    events = [e for e in events if e.get("id") != event_id]
-    _save_json(CALENDAR_FILE, events)
-    _rebuild_index()
+def delete_calendar_event(event_id: str, request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        db.delete_event(event_id)
+    _rebuild_index(request)
     return {}
 
 
-def _chunks() -> list:
-    from src.rag import CHUNKS_FILE
-    try:
-        with open(CHUNKS_FILE, encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception:
-        return []
-    return data if isinstance(data, list) else []
-
-
-def _original_name(document_id: str) -> str:
-    from src.chunking import FILES_DIR
-    meta = Path(FILES_DIR) / f"{document_id}.meta.json"
+def _original_name(request: Request, document_id: str) -> str:
+    meta = _user_files_dir(request) / f"{document_id}.meta.json"
     try:
         with open(meta, encoding="utf-8") as f:
             data = json.load(f)
@@ -938,50 +964,9 @@ def _original_name(document_id: str) -> str:
 
 
 @app.get("/documents/")
-def documents() -> list[dict]:
-    counts = {}
-    for chunk in _chunks():
-        if isinstance(chunk, dict):
-            path = chunk.get("file_path")
-            if isinstance(path, str):
-                counts[path] = counts.get(path, 0) + 1
-
-    files_dir = Path(FILES_DIR)
-    result = []
-    if files_dir.is_dir():
-        from src import chunking
-        for path in sorted(files_dir.iterdir()):
-            suffix = path.suffix.lower()
-            if not path.is_file() or suffix not in ALLOWED_SUFFIXES:
-                continue
-            if path.name.endswith(".meta.json"):
-                continue
-            if path.name.startswith(_GENERATED_PREFIXES):
-                continue
-            extracted = ""
-            try:
-                if suffix in {".txt", ".md"}:
-                    extracted = path.read_text(encoding="utf-8", errors="ignore")[:2000]
-                elif suffix == ".pdf":
-                    extracted = chunking.pdf_to_text_file(path)[:2000]
-                elif suffix == ".docx":
-                    extracted = chunking.docx_to_text_file(path)[:2000]
-            except Exception:
-                extracted = ""
-            result.append(
-                {
-                    "id": path.name,
-                    "folder": None,
-                    "filename": _original_name(path.name),
-                    "file_type": suffix.lstrip("."),
-                    "file_size": path.stat().st_size,
-                    "storage_path": str(path),
-                    "extracted_text": extracted,
-                    "created_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat() + "Z",
-                    "updated_at": datetime.fromtimestamp(path.stat().st_mtime).isoformat() + "Z",
-                }
-            )
-    return result
+def documents(request: Request) -> list[dict]:
+    with DB(_uid(request)) as db:
+        return db.list_documents()
 
 
 @app.get("/document-folders/")
@@ -990,91 +975,98 @@ def document_folders() -> list:
 
 
 @app.post("/documents/")
-def upload_document(file: UploadFile = File(...), folder: Optional[str] = Form(None)) -> dict:
+def upload_document(request: Request, file: UploadFile = File(...), folder: Optional[str] = Form(None)) -> dict:
     try:
-        out_path, original = _save_upload(file)
-        _rebuild_index()
+        out_path, original = _save_upload(request, file)
+        suffix = out_path.suffix.lower()
+        extracted = ""
+        from src import chunking
+        try:
+            if suffix in {".txt", ".md"}:
+                extracted = out_path.read_text(encoding="utf-8", errors="ignore")[:2000]
+            elif suffix == ".pdf":
+                extracted = chunking.pdf_to_text_file(out_path)[:2000]
+            elif suffix == ".docx":
+                extracted = chunking.docx_to_text_file(out_path)[:2000]
+        except Exception:
+            extracted = ""
+        with DB(_uid(request)) as db:
+            doc = db.insert_document(
+                doc_id=out_path.name,
+                filename=original,
+                file_type=suffix.lstrip("."),
+                file_size=out_path.stat().st_size,
+                storage_path=str(out_path),
+                extracted_text=extracted,
+            )
+        _rebuild_index(request)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {
-        "id": out_path.name,
-        "folder": folder,
-        "filename": original,
-        "file_type": out_path.suffix.lower().lstrip("."),
-        "file_size": out_path.stat().st_size,
-        "storage_path": str(out_path),
-        "extracted_text": "",
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "updated_at": datetime.utcnow().isoformat() + "Z",
-    }
+    return doc
 
 
 @app.delete("/documents/{document_id}/")
-def delete_document(document_id: str) -> dict:
+def delete_document(document_id: str, request: Request) -> dict:
     try:
-        path = Path(FILES_DIR) / document_id
+        path = _user_files_dir(request) / document_id
         if path.exists():
             path.unlink()
         meta = Path(f"{path}.meta.json")
         if meta.exists():
             meta.unlink()
         try:
-            rag.delete_file(str(path))
+            _rag(request).delete_file(str(path))
         except Exception:
             pass
-        _rebuild_index()
+        with DB(_uid(request)) as db:
+            db.delete_document(document_id)
+        _rebuild_index(request)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {}
 
 
-@app.get("/documents/{document_id}/view/")
-def view_document(document_id: str):
-    path = Path(FILES_DIR) / document_id
-    if not path.exists():
+def _get_doc(request: Request, document_id: str) -> dict:
+    with DB(_uid(request)) as db:
+        doc = db.get_document(document_id)
+    if doc is None:
         raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(path)
+    return doc
+
+
+@app.get("/documents/{document_id}/view/")
+def view_document(document_id: str, request: Request):
+    return FileResponse(_get_doc(request, document_id)["storage_path"])
 
 
 @app.get("/documents/{document_id}/download/")
-def download_document(document_id: str):
-    path = Path(FILES_DIR) / document_id
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="Not found")
-    return FileResponse(path, filename=_original_name(document_id))
+def download_document(document_id: str, request: Request):
+    doc = _get_doc(request, document_id)
+    return FileResponse(doc["storage_path"], filename=doc["filename"])
 
 
 @app.get("/user/")
-def get_user() -> dict:
-    _ensure_data_dir()
-    user = _load_json(USER_FILE, {})
-    return user
+def get_user(request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        return db.get_user() or {}
 
 
 @app.post("/user/")
-def create_user(user: UserProfile) -> dict:
-    _ensure_data_dir()
-    data = {"name": user.name, "gender": user.gender, "age": user.age, "language": user.language}
-    _save_json(USER_FILE, data)
-    return data
+def create_user(user: UserProfile, request: Request) -> dict:
+    return _update_user_profile(user, request)
 
 
 @app.put("/user/")
-def update_user(user: UserProfile) -> dict:
-    _ensure_data_dir()
-    data = _load_json(USER_FILE, {})
-    if user.name is not None:
-        data["name"] = user.name
-    if user.language is not None:
-        data["language"] = user.language
-    if user.gender is not None:
-        data["gender"] = user.gender
-    if user.age is not None:
-        data["age"] = user.age
-    _save_json(USER_FILE, data)
-    return data
+def update_user(user: UserProfile, request: Request) -> dict:
+    return _update_user_profile(user, request)
+
+
+def _update_user_profile(user: UserProfile, request: Request) -> dict:
+    fields = {k: v for k, v in user.model_dump().items() if v is not None}
+    with DB(_uid(request)) as db:
+        return db.update_user(fields)
 
 
 @app.post("/api-key/")
@@ -1112,11 +1104,11 @@ def save_api_key(config: ApiKeyConfig) -> dict:
 
 
 @app.get("/search/")
-def search(q: str = "") -> dict:
+def search(request: Request, q: str = "") -> dict:
     if not q.strip():
         return {"results": []}
     query = q.strip().lower()
-    lang = _user_lang()
+    lang = _user_lang(request)
     t = _T[lang]
 
     out = []
@@ -1148,7 +1140,12 @@ def search(q: str = "") -> dict:
                 })
                 seen.add(key)
 
-    notes = _load_json(NOTES_FILE, [])
+    with DB(_uid(request)) as db:
+        notes = db.list_notes()
+        events = db.list_events()
+        tasks = db.list_tasks()
+        docs = db.list_documents()
+
     for n in notes:
         content = (n.get("content") or "").lower()
         if query in content:
@@ -1163,7 +1160,6 @@ def search(q: str = "") -> dict:
                 })
                 seen.add(nid)
 
-    events = _load_json(CALENDAR_FILE, [])
     for e in events:
         title = (e.get("title") or "").lower()
         desc = (e.get("description") or "").lower()
@@ -1179,7 +1175,6 @@ def search(q: str = "") -> dict:
                 })
                 seen.add(eid)
 
-    tasks = _load_json(TASKS_FILE, [])
     for tsk in tasks:
         title = (tsk.get("title") or "").lower()
         if query in title:
@@ -1194,23 +1189,18 @@ def search(q: str = "") -> dict:
                 })
                 seen.add(tid)
 
-    files_dir = Path(FILES_DIR)
-    if files_dir.is_dir():
-        for path in sorted(files_dir.iterdir()):
-            if not path.is_file() or path.name.endswith(".meta.json"):
-                continue
-            if path.name.startswith(_GENERATED_PREFIXES):
-                continue
-            orig = _original_name(path.name).lower()
-            if query in orig:
-                if path.name not in seen:
-                    out.append({
-                        "id": path.name,
-                        "type": "document",
-                        "title": _original_name(path.name),
-                        "preview": t["src_document"],
-                        "url": "/documents"
-                    })
-                    seen.add(path.name)
+    for d in docs:
+        orig = (d.get("filename") or "").lower()
+        if query in orig:
+            did = d.get("id") or ""
+            if did not in seen:
+                out.append({
+                    "id": did,
+                    "type": "document",
+                    "title": d.get("filename") or t["src_document"],
+                    "preview": t["src_document"],
+                    "url": "/documents"
+                })
+                seen.add(did)
 
     return {"results": out[:20]}

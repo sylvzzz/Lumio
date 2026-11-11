@@ -47,22 +47,8 @@ const router = createBrowserRouter([
 
 function Root() {
   const { loading, needsOnboarding, updateUser } = useUser()
-  const [showIntro, setShowIntro] = useState(() => {
-    return localStorage.getItem('lumio_intro_seen') !== 'true'
-  })
 
   if (loading) return null
-
-  if (showIntro) {
-    return (
-      <Intro
-        onContinue={() => {
-          localStorage.setItem('lumio_intro_seen', 'true')
-          setShowIntro(false)
-        }}
-      />
-    )
-  }
 
   if (needsOnboarding) {
     return <UserOnboarding onComplete={(u) => updateUser(u)} />
