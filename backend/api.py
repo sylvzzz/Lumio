@@ -30,8 +30,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# authorized mails, app is single user currently
-ALLOWED_EMAILS = {e.strip().lower() for e in os.environ["ALLOWED_EMAILS"].split(",")}
+# authorized mails, app is multi user now so this is optional
+
+_raw_emails = os.environ.get("ALLOWED_EMAILS", "")
+ALLOWED_EMAILS = {e.strip().lower() for e in _raw_emails.split(",") if e.strip()}
 OAUTH_REDIRECT_URI = os.environ["OAUTH_REDIRECT_URI"]
 PUBLIC_PATHS = {"/login", "/auth/callback", "/status"} 
 
@@ -193,7 +195,7 @@ async def auth_callback(request: Request):
         return RedirectResponse("/auth-error?reason=failed")
     info = token.get("userinfo") or {}
     email = (info.get("email") or "").lower()
-    if not info.get("email_verified") or email not in ALLOWED_EMAILS:
+    if not info.get("email_verified") or (ALLOWED_EMAILS and email not in ALLOWED_EMAILS):
         return RedirectResponse("/auth-error?reason=not_found")
     try:
         with DB() as db:
