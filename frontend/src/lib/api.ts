@@ -17,7 +17,12 @@ async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> 
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await apiFetch(url)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+
+  /*{email: '@gmail.com', name: 'name'} */
+  const data = await res.json()
+  console.log(data)
+
+  return data
 }
 
 async function mutate<T>(url: string, method: string, body?: unknown): Promise<T> {
@@ -67,6 +72,7 @@ export interface Task {
   updated_at: string
 }
 
+/*
 export interface Email {
   id: string
   account: string
@@ -80,7 +86,7 @@ export interface Email {
   received_at: string
   is_read: boolean
   is_starred: boolean
-}
+}*/
 
 export interface Document {
   id: string
