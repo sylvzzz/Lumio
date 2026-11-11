@@ -15,7 +15,7 @@ RANK_HEADING = re.compile(r"^rank\s+\d+$", re.IGNORECASE)
 TABLE_ROW = re.compile(
     r"^(?P<item>.+?)\s+(?P<grade>\d+)\s+(?P<hours>\d+)\s*H\s*$"
 )
-SYSTEM_PROMPT = (
+SYSTEM_PROMPT_BASE = (
     "You are the assistant of a document chat platform. Users upload "
     "documents that are split into chunks and indexed, and the relevant "
     "chunks are given to you as sources. Answer questions using those "
@@ -28,8 +28,20 @@ SYSTEM_PROMPT = (
     "'based on the document', 'according to the file', or similar phrases. "
     "Only say which file was used if the user explicitly asks which "
     "source you used. "
-    "Answer in the same language as the user prompt."
 )
+
+# Configured language of the user (from backend user.json) -> prompt wording.
+LANGUAGE_NAMES = {"pt": "Portuguese", "en": "English"}
+
+_QUESTION_LANG_PROMPT = "Answer in the same language as the user prompt."
+
+
+def system_prompt(language: str | None) -> str:
+    """Base system prompt plus the configured answer language."""
+    name = LANGUAGE_NAMES.get(language or "")
+    if name:
+        return SYSTEM_PROMPT_BASE + f"Always answer in {name}."
+    return SYSTEM_PROMPT_BASE + _QUESTION_LANG_PROMPT
 
 
 class Model:
@@ -102,7 +114,8 @@ class Model:
         return "\n\n".join(blocks)
 
     def _messages(self, question: str, sources: List[MinimalSource],
-                  history: List[dict[str, Any]] | None
+                  history: List[dict[str, Any]] | None,
+                  language: str | None = None,
                   ) -> list[ChatCompletionMessageParam]:
         """Build the chat messages sent to the model."""
         user = (
@@ -110,7 +123,7 @@ class Model:
             f"Question: {question}"
         )
         messages: list[ChatCompletionMessageParam] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt(language)},
         ]
         for message in (history or [])[-MAX_HISTORY_MESSAGES:]:
             role = message.get("role")
@@ -128,10 +141,11 @@ class Model:
         return messages
 
     def answer(self, question: str, sources: List[MinimalSource],
-               history: List[dict[str, Any]] | None = None) -> str:
+               history: List[dict[str, Any]] | None = None,
+               language: str | None = None) -> str:
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=self._messages(question, sources, history),
+            messages=self._messages(question, sources, history, language),
             temperature=0,
         )
         text = response.choices[0].message.content
@@ -143,11 +157,12 @@ class Model:
         return result
 
     def answer_stream(self, question: str, sources: List[MinimalSource],
-                      history: List[dict[str, Any]] | None = None):
+                      history: List[dict[str, Any]] | None = None,
+                      language: str | None = None):
         """Yield the answer text as the model produces it."""
         response = self.client.chat.completions.create(
             model=self.model_name,
-            messages=self._messages(question, sources, history),
+            messages=self._messages(question, sources, history, language),
             temperature=0,
             stream=True,
         )

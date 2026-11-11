@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Send, Bot, User } from 'lucide-react'
-import { useUser } from '@/hooks/useUser'
+import { useT, useUser } from '@/hooks/useUser'
 import { useChatComposer } from '@/hooks/use-chat-composer'
 import { Markdown } from '@/components/Markdown'
 import { SourceRows } from '@/components/SourceRows'
@@ -9,6 +9,7 @@ import { sourceFiles } from '@/lib/sources'
 import { TypingDots } from '@/components/TypingDots'
 
 export function Lumio() {
+  const t = useT()
   const { user } = useUser()
   const reduceMotion = useReducedMotion()
   const { input, setInput, sending, messages, handleSend } = useChatComposer()
@@ -63,7 +64,7 @@ export function Lumio() {
                 transition={{ duration: 0.4, delay: 0.1 }}
                 className="text-2xl sm:text-3xl font-semibold"
               >
-                Olá{displayName ? `, ${displayName}` : ''}. Como posso ajudar?
+                {t.lumioHello}{displayName ? `, ${displayName}` : ''}. {t.lumioGreeting}
               </motion.h1>
               <motion.p
                 initial={{ y: 10, opacity: 0 }}
@@ -71,7 +72,7 @@ export function Lumio() {
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="text-muted-foreground"
               >
-                Pergunta-me qualquer coisa sobre as tuas notas, documentos e calendário.
+                {t.lumioSubtitle}
               </motion.p>
             </div>
           </div>
@@ -143,7 +144,7 @@ export function Lumio() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escreve a tua mensagem..."
+            placeholder={t.lumioPlaceholder}
             disabled={sending}
             className="flex-1 h-11 px-4 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-50"
           />

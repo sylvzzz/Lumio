@@ -209,7 +209,7 @@ export const api = {
   },
   chat: {
     sessions: () => fetchJSON<ChatSession[]>('/chat-sessions/'),
-    createSession: (title?: string) => mutate<ChatSession>('/chat-sessions/', 'POST', { title: title || 'New Chat' }),
+    createSession: (title?: string) => mutate<ChatSession>('/chat-sessions/', 'POST', { title: title ?? '' }),
     sendMessage: (session: string, content: string, timezone?: string) => mutate<ChatSendResponse>('/chat-messages/', 'POST', { session, content, role: 'user', timezone }),
     streamMessage: async (
       session: string,

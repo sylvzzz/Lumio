@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, Calendar, Venus, Mars, HelpCircle, Moon, Sun, ChevronLeft, Key, Zap } from 'lucide-react'
+import { useT } from '@/hooks/useUser'
 
 interface UserOnboardingProps {
   onComplete: (user: { name: string; gender: string | null; age: number | null }) => void
@@ -9,6 +10,7 @@ interface UserOnboardingProps {
 const ages = Array.from({ length: 83 }, (_, i) => i + 13)
 
 function ThemeToggle() {
+  const t = useT()
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false
     const stored = localStorage.getItem('theme')
@@ -25,7 +27,7 @@ function ThemeToggle() {
     <button
       onClick={() => setDark(!dark)}
       className="absolute top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))] h-11 w-11 sm:h-9 sm:w-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
-      aria-label="Toggle theme"
+      aria-label={dark ? t.lightTheme : t.darkTheme}
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
@@ -33,6 +35,7 @@ function ThemeToggle() {
 }
 
 export function UserOnboarding({ onComplete }: UserOnboardingProps) {
+  const t = useT()
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [age, setAge] = useState<number | ''>('')
@@ -101,13 +104,13 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
           <button
             onClick={handleBack}
             className="absolute top-4 left-4 h-11 w-11 sm:h-9 sm:w-9 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors"
-            aria-label="Voltar"
+            aria-label={t.back}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
         )}
         <div className="text-center text-xs text-muted-foreground mb-4 mt-2">
-          Passo {step + 1} de {hasPaidService === 'yes' ? 5 : 4}
+          {t.step} {step + 1} {t.of} {hasPaidService === 'yes' ? 5 : 4}
         </div>
         <AnimatePresence mode="wait">
           {step === 0 && (
@@ -122,15 +125,15 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                   <User className="w-6 h-6 text-accent" />
                 </div>
-                <h2 className="text-xl font-semibold">Como te queres chamar?</h2>
-                <p className="text-sm text-muted-foreground">O nome que vamos usar para te tratar</p>
+                <h2 className="text-xl font-semibold">{t.whatsYourName}</h2>
+                <p className="text-sm text-muted-foreground">{t.nameHelper}</p>
               </div>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleNext()}
-                placeholder="Nome..."
+                placeholder={t.namePlaceholder}
                 className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 autoFocus
               />
@@ -139,7 +142,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 disabled={!name.trim()}
                 className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Continuar
+                {t.continue}
               </button>
             </motion.div>
           )}
@@ -156,8 +159,8 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                   <Calendar className="w-6 h-6 text-accent" />
                 </div>
-                <h2 className="text-xl font-semibold">Qual a tua idade?</h2>
-                <p className="text-sm text-muted-foreground">Opcional</p>
+                <h2 className="text-xl font-semibold">{t.howOld}</h2>
+                <p className="text-sm text-muted-foreground">{t.optional}</p>
               </div>
               <select
                 value={age}
@@ -171,7 +174,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 }}
                 className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
-                <option value="">Seleccionar idade</option>
+                <option value="">{t.selectAge}</option>
                 {ages.map((a) => (
                   <option key={a} value={a}>{a}</option>
                 ))}
@@ -181,13 +184,13 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                   onClick={skipAge}
                   className="flex-1 h-11 sm:h-10 bg-background border border-border rounded-xl hover:bg-accent/5 transition-colors"
                 >
-                  Saltar
+                  {t.skip}
                 </button>
                 <button
                   onClick={handleNext}
                   className="flex-1 h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
                 >
-                  Continuar
+                  {t.continue}
                 </button>
               </div>
             </motion.div>
@@ -202,8 +205,8 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
               className="space-y-6"
             >
               <div className="text-center space-y-2">
-                <h2 className="text-xl font-semibold">Género/Sexo</h2>
-                <p className="text-sm text-muted-foreground">Opcional</p>
+                <h2 className="text-xl font-semibold">{t.genderTitle}</h2>
+                <p className="text-sm text-muted-foreground">{t.optional}</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -213,7 +216,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                   }`}
                 >
                   <Mars className="w-5 h-5" />
-                  <span className="text-xs">Masculino</span>
+                  <span className="text-xs">{t.male}</span>
                 </button>
                 <button
                   onClick={() => setGender('female')}
@@ -222,7 +225,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                   }`}
                 >
                   <Venus className="w-5 h-5" />
-                  <span className="text-xs">Feminino</span>
+                  <span className="text-xs">{t.female}</span>
                 </button>
                 <button
                   onClick={() => setGender('prefer_not_to_say')}
@@ -231,14 +234,14 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                   }`}
                 >
                   <HelpCircle className="w-5 h-5" />
-                  <span className="text-xs">Prefiro não dizer</span>
+                  <span className="text-xs">{t.preferNotToSay}</span>
                 </button>
               </div>
               <button
                 onClick={handleNext}
                 className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
               >
-                Continuar
+                {t.continue}
               </button>
             </motion.div>
           )}
@@ -255,8 +258,8 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                   <Zap className="w-6 h-6 text-accent" />
                 </div>
-                <h2 className="text-xl font-semibold">Tens algum serviço de IA pago?</h2>
-                <p className="text-sm text-muted-foreground">Groq, OpenAI ou DeepSeek</p>
+                <h2 className="text-xl font-semibold">{t.paidServiceTitle}</h2>
+                <p className="text-sm text-muted-foreground">{t.paidServiceHelper}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -266,7 +269,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                     hasPaidService === 'yes' ? 'border-accent bg-accent/10' : 'border-border hover:bg-accent/5'
                   }`}
                 >
-                  Sim
+                  {t.yes}
                 </button>
                 <button
                   type="button"
@@ -275,7 +278,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                     hasPaidService === 'no' ? 'border-accent bg-accent/10' : 'border-border hover:bg-accent/5'
                   }`}
                 >
-                  Não
+                  {t.no2}
                 </button>
               </div>
               <button
@@ -290,7 +293,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 disabled={!hasPaidService}
                 className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {hasPaidService === 'no' ? 'Finalizar' : 'Continuar'}
+                {hasPaidService === 'no' ? t.finalize : t.continue}
               </button>
             </motion.div>
           )}
@@ -307,15 +310,15 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                   <Key className="w-6 h-6 text-accent" />
                 </div>
-                <h2 className="text-xl font-semibold">Configurar API Key</h2>
-                <p className="text-sm text-muted-foreground">Escolhe o provider e insere a tua key</p>
+                <h2 className="text-xl font-semibold">{t.configureApiKey}</h2>
+                <p className="text-sm text-muted-foreground">{t.apiKeyHelper}</p>
               </div>
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
                 className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               >
-                <option value="">Seleccionar provider</option>
+                <option value="">{t.selectProvider}</option>
                 <option value="groq">Groq</option>
                 <option value="openai">OpenAI</option>
                 <option value="deepseek">DeepSeek</option>
@@ -325,7 +328,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && provider && apiKey.trim() && handleNext()}
-                placeholder="API Key..."
+                placeholder={t.apiKeyInputPlaceholder}
                 className="w-full h-11 sm:h-10 px-4 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
               <button
@@ -333,7 +336,7 @@ export function UserOnboarding({ onComplete }: UserOnboardingProps) {
                 disabled={!provider || !apiKey.trim()}
                 className="w-full h-11 sm:h-10 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Guardar e finalizar
+                {t.saveAndFinish}
               </button>
             </motion.div>
           )}

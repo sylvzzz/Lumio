@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ShieldX, RotateCw } from 'lucide-react'
+import { useT } from '@/hooks/useUser'
 
 export function AuthError() {
   const reason = new URLSearchParams(window.location.search).get('reason')
   const restricted = reason === 'not_found'
+  const t = useT()
 
   useEffect(() => {
     const stored = localStorage.getItem('theme')
@@ -33,12 +35,10 @@ export function AuthError() {
         </motion.div>
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold">
-            {restricted ? 'Restricted Access' : 'Something went wrong'}
+            {restricted ? t.restrictedAccess : t.somethingWrong}
           </h1>
           <p className="text-muted-foreground">
-            {restricted
-              ? 'This account does not have access to Lumio.'
-              : 'Something went wrong... please try again.'}
+            {restricted ? t.restrictedText : t.somethingWrongText}
           </p>
         </div>
         <button
@@ -46,7 +46,7 @@ export function AuthError() {
           className="flex items-center gap-2 mx-auto px-4 py-2 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
         >
           <RotateCw className="w-4 h-4" />
-          {restricted ? 'Try another account' : 'Try again'}
+          {restricted ? t.tryAnotherAccount : t.tryAgainShort}
         </button>
       </motion.div>
     </div>

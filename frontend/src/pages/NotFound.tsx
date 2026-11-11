@@ -2,9 +2,11 @@ import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Home, ArrowLeft } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useT } from '@/hooks/useUser'
 
 export function NotFound() {
   const navigate = useNavigate()
+  const t = useT()
 
   useEffect(() => {
     const stored = localStorage.getItem('theme')
@@ -32,9 +34,9 @@ export function NotFound() {
           404
         </motion.div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold">Página não encontrada</h1>
+          <h1 className="text-2xl font-semibold">{t.notFoundTitle}</h1>
           <p className="text-muted-foreground">
-            Esta página não existe ou foi movida.
+            {t.notFoundText}
           </p>
         </div>
         <div className="flex gap-3 justify-center">
@@ -43,14 +45,14 @@ export function NotFound() {
             className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl hover:bg-accent/5 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Voltar
+            {t.goBack}
           </button>
           <Link
             to="/"
             className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-xl hover:bg-accent/90 transition-colors"
           >
             <Home className="w-4 h-4" />
-            Ir para início
+            {t.goHome}
           </Link>
         </div>
       </motion.div>

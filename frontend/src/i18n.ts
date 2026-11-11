@@ -78,7 +78,7 @@ const pt = {
 
   // tasks
   tasksTitle: 'Tarefas',
-  tasksSubtitle: 'Mantém o controlo do que importa.',
+  tasksSubtitle: 'Aponta as tuas tarefas.',
   filterAll: 'Todas',
   filterActive: 'Ativas',
   filterDone: 'Concluídas',
@@ -99,7 +99,7 @@ const pt = {
 
   // calendar
   calendarTitle: 'Calendário',
-  calendarSubtitle: 'A tua agenda num relance.',
+  calendarSubtitle: 'A tua agenda aqui.',
   newEvent: 'Novo evento',
   today: 'Hoje',
   tomorrow: 'Amanhã',
@@ -177,8 +177,8 @@ const pt = {
   step: 'Passo',
   of: 'de',
   back: 'Voltar',
-  whatsYourName: 'Como te queres chamar?',
-  nameHelper: 'O nome que vamos usar para te tratar',
+  whatsYourName: 'Como te chamas?',
+  nameHelper: 'O nome que o Lumio vai usar para te tratar',
   namePlaceholder: 'Nome...',
   continue: 'Continuar',
   howOld: 'Qual a tua idade?',
@@ -199,7 +199,7 @@ const pt = {
 
   // intro
   introTagline: 'O teu workspace pessoal com IA. Centraliza notas, documentos, emails e calendário num só lugar.',
-  start: 'Começar',
+  getStarted: 'Começar',
   startNow: 'Começar agora',
   whyTitle: 'Porquê usar o Lumio?',
   whyText: 'Em vez de ter tudo espalhado por diferentes apps, o Lumio junta tudo num workspace inteligente. O teu assistente IA tem acesso a todo o teu conteúdo e ajuda-te a encontrar, resumir e organizar sem perder tempo à procura.',
@@ -212,6 +212,10 @@ const pt = {
   introTodayAgenda: 'Agenda Hoje',
   introChatQuestion: 'O que diz o documento "Relatório Progresso.pdf" sobre o prazo?',
   introChatAnswer: 'No Relatório Progresso.pdf, o prazo para conclusão da fase 2 foi definido para 15 de Novembro de 2025. Foi também mencionado que serão necessários testes antes da entrega.',
+  introMockNote1: 'Reunião com equipa - discutir roadmap Q4',
+  introMockNote2: 'Ideias para projeto Lumio',
+  introMockEvent1: 'Reunião Equipa',
+  introMockEvent2: 'Apresentação Cliente',
   featureAI: 'IA Inteligente',
   featureAIDesc: 'Assistente que entende todo o teu conteúdo e responde com contexto',
   featureDocs: 'Documentos',
@@ -240,6 +244,7 @@ const pt = {
   tryAgainShort: 'Tentar novamente',
 
   // lumio page
+  lumioHello: 'Olá',
   lumioGreeting: 'Como posso ajudar?',
   lumioSubtitle: 'Pergunta-me qualquer coisa sobre as tuas notas, documentos e calendário.',
   lumioPlaceholder: 'Escreve a tua mensagem...',
@@ -340,7 +345,7 @@ const en: Record<TextKey, string> = {
   deleteTask: 'Delete task',
 
   calendarTitle: 'Calendar',
-  calendarSubtitle: 'Your schedule at a glance.',
+  calendarSubtitle: 'Your schedule here.',
   newEvent: 'New Event',
   today: 'Today',
   tomorrow: 'Tomorrow',
@@ -414,8 +419,8 @@ const en: Record<TextKey, string> = {
   step: 'Step',
   of: 'of',
   back: 'Back',
-  whatsYourName: 'What should we call you?',
-  nameHelper: 'The name we will use to address you',
+  whatsYourName: 'What´s your name?',
+  nameHelper: 'The name Lumio will use to address you',
   namePlaceholder: 'Name...',
   continue: 'Continue',
   howOld: 'How old are you?',
@@ -435,7 +440,7 @@ const en: Record<TextKey, string> = {
   saveAndFinish: 'Save and finish',
 
   introTagline: 'Your personal AI workspace. Notes, documents, emails and calendar, all in one place.',
-  start: 'Get started',
+  getStarted: 'Get started',
   startNow: 'Get started now',
   whyTitle: 'Why use Lumio?',
   whyText: 'Instead of having everything scattered across different apps, Lumio brings it all together in one smart workspace. Your AI assistant has access to all your content and helps you find, summarize and organize it without wasting time searching.',
@@ -448,6 +453,10 @@ const en: Record<TextKey, string> = {
   introTodayAgenda: "Today's Schedule",
   introChatQuestion: 'What does the "Progress Report.pdf" document say about the deadline?',
   introChatAnswer: 'In Progress Report.pdf, the deadline for completing phase 2 was set to November 15, 2025. It was also mentioned that testing will be needed before delivery.',
+  introMockNote1: 'Team meeting - discuss Q4 roadmap',
+  introMockNote2: 'Ideas for the Lumio project',
+  introMockEvent1: 'Team Meeting',
+  introMockEvent2: 'Client Presentation',
   featureAI: 'Smart AI',
   featureAIDesc: 'An assistant that understands all your content and answers with context',
   featureDocs: 'Documents',
@@ -473,6 +482,7 @@ const en: Record<TextKey, string> = {
   tryAnotherAccount: 'Try another account',
   tryAgainShort: 'Try again',
 
+  lumioHello: 'Hi',
   lumioGreeting: 'How can I help?',
   lumioSubtitle: 'Ask me anything about your notes, documents and calendar.',
   lumioPlaceholder: 'Type your message...',

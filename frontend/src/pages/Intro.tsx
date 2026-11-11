@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useUser } from '@/hooks/useUser'
+import { useT } from '@/hooks/useUser'
 import { Bot, FileText, StickyNote, Calendar, Mail, Brain, ArrowRight, Moon, Sun, Home, CheckSquare, Search, Send, User } from 'lucide-react'
 
 interface IntroProps {
@@ -8,6 +8,7 @@ interface IntroProps {
 }
 
 function ThemeToggle() {
+  const t = useT()
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false
     const stored = localStorage.getItem('theme')
@@ -24,72 +25,58 @@ function ThemeToggle() {
     <button
       onClick={() => setDark(!dark)}
       className="absolute top-[max(1.5rem,env(safe-area-inset-top))] right-[max(1.5rem,env(safe-area-inset-right))] h-11 w-11 sm:h-10 sm:w-10 rounded-xl bg-card border border-border flex items-center justify-center hover:bg-accent/5 transition-colors z-10"
-      aria-label="Toggle theme"
+      aria-label={dark ? t.lightTheme : t.darkTheme}
     >
       {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
     </button>
   )
 }
 
-const features = [
-  {
-    icon: Brain,
-    title: 'IA Inteligente',
-    description: 'Assistente que entende todo o teu conteúdo e responde com contexto',
-  },
-  {
-    icon: FileText,
-    title: 'Documentos',
-    description: 'Carrega PDFs, Word, TXT e pesquisa em todos eles',
-  },
-  {
-    icon: StickyNote,
-    title: 'Notas',
-    description: 'Organiza as tuas ideias num só lugar',
-  },
-  {
-    icon: Calendar,
-    title: 'Calendário',
-    description: 'Gere os teus eventos e compromissos',
-  },
-  {
-    icon: Mail,
-    title: 'Emails',
-    description: 'Tudo centralizado na tua caixa de entrada',
-  },
-  {
-    icon: Bot,
-    title: 'Chat com contexto',
-    description: 'Pergunta ao Lumio sobre qualquer coisa que guardaste',
-  },
-]
-
-const quickLinks = [
-  { name: 'Notas', icon: StickyNote, color: 'text-accent' },
-  { name: 'Documentos', icon: FileText, color: 'text-red-500' },
-  { name: 'Calendário', icon: Calendar, color: 'text-orange-500' },
-  { name: 'Tarefas', icon: CheckSquare, color: 'text-green-500' },
-]
-
-const mockNotes = [
-  { id: 1, content: 'Reunião com equipa - discutir roadmap Q4' },
-  { id: 2, content: 'Ideias para projeto Lumio' },
-]
-
-const mockEvents = [
-  { id: 1, title: 'Reunião Equipa', time: '14:00' },
-  { id: 2, title: 'Apresentação Cliente', time: '16:30' },
-]
-
 export function Intro({ onContinue }: IntroProps) {
-  const { user } = useUser()
-  const language = user.language ?? 'pt'
+  const t = useT()
+
+  const features = [
+    { icon: Brain, title: t.featureAI, description: t.featureAIDesc },
+    { icon: FileText, title: t.featureDocs, description: t.featureDocsDesc },
+    { icon: StickyNote, title: t.featureNotes, description: t.featureNotesDesc },
+    { icon: Calendar, title: t.featureCalendar, description: t.featureCalendarDesc },
+    { icon: Mail, title: t.featureEmails, description: t.featureEmailsDesc },
+    { icon: Bot, title: t.featureChat, description: t.featureChatDesc },
+  ]
+
+  const quickLinks = [
+    { name: t.navNotes, icon: StickyNote, color: 'text-accent' },
+    { name: t.navDocuments, icon: FileText, color: 'text-red-500' },
+    { name: t.navCalendar, icon: Calendar, color: 'text-orange-500' },
+    { name: t.navTasks, icon: CheckSquare, color: 'text-green-500' },
+  ]
+
+  const mockNotes = [
+    { id: 1, content: t.introMockNote1 },
+    { id: 2, content: t.introMockNote2 },
+  ]
+
+  const mockEvents = [
+    { id: 1, title: t.introMockEvent1, time: '14:00' },
+    { id: 2, title: t.introMockEvent2, time: '16:30' },
+  ]
+
+  const mockSidebar = [
+    { icon: Home, label: t.navHome, active: true },
+    { icon: Calendar, label: t.navCalendar },
+    { icon: StickyNote, label: t.navNotes },
+    { icon: FileText, label: t.navDocuments },
+    { icon: Mail, label: t.navEmails },
+    { icon: CheckSquare, label: t.navTasks },
+    { icon: Bot, label: t.navLumio },
+  ]
+
   return (
     <div className="min-h-dvh bg-canvas relative overflow-hidden">
       <ThemeToggle />
-      
+
       <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/5" />
-      
+
       <div className="relative max-w-7xl mx-auto px-4 py-10 sm:px-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -104,7 +91,7 @@ export function Intro({ onContinue }: IntroProps) {
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Lumio</h1>
           </div>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 px-2">
-            O teu workspace pessoal com IA. Centraliza notas, documentos, emails e calendário num só lugar.
+            {t.introTagline}
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -112,7 +99,7 @@ export function Intro({ onContinue }: IntroProps) {
             onClick={onContinue}
             className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 min-h-11 bg-accent text-white rounded-xl text-base sm:text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
           >
-            Começar
+            {t.getStarted}
             <ArrowRight className="w-5 h-5" />
           </motion.button>
         </motion.div>
@@ -135,15 +122,7 @@ export function Intro({ onContinue }: IntroProps) {
                     <span className="font-semibold">Lumio</span>
                   </div>
                   <div className="space-y-1">
-                    {[
-                      { icon: Home, label: 'Home', active: true },
-                      { icon: Calendar, label: 'Calendar' },
-                      { icon: StickyNote, label: 'Notes' },
-                      { icon: FileText, label: 'Documents' },
-                      { icon: Mail, label: 'Emails' },
-                      { icon: CheckSquare, label: 'Tasks' },
-                      { icon: Bot, label: 'Lumio' },
-                    ].map((item) => (
+                    {mockSidebar.map((item) => (
                       <div
                         key={item.label}
                         className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm ${
@@ -159,13 +138,13 @@ export function Intro({ onContinue }: IntroProps) {
                 <div className="flex-1 p-10 overflow-hidden">
                   <div className="flex items-center justify-between mb-8">
                     <div>
-                      <h1 className="text-3xl font-semibold tracking-tight">{language === 'pt' ? 'Bom dia, Diogo' : 'Good morning, Diogo'}</h1>
-                      <p className="text-sm text-muted-foreground mt-1">{language === 'pt' ? 'Tudo o que precisas está pronto.' : 'Everything you need is ready.'}</p>
+                      <h1 className="text-3xl font-semibold tracking-tight">{t.introMorning}</h1>
+                      <p className="text-sm text-muted-foreground mt-1">{t.introReady}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="relative w-56 h-9 bg-card rounded-xl border border-border/50 flex items-center px-3">
                         <Search className="w-4 h-4 text-muted-foreground mr-2" />
-                        <span className="text-[13px] text-muted-foreground/50">Search everything...</span>
+                        <span className="text-[13px] text-muted-foreground/50">{t.introSearch}</span>
                       </div>
                       <div className="w-9 h-9 rounded-xl bg-card border border-border/50 flex items-center justify-center">
                         <Moon className="w-4 h-4" />
@@ -173,7 +152,7 @@ export function Intro({ onContinue }: IntroProps) {
                     </div>
                   </div>
                   <div className="mb-6">
-                    <h2 className="text-lg font-medium mb-3">Acesso rápido</h2>
+                    <h2 className="text-lg font-medium mb-3">{t.quickAccess}</h2>
                     <div className="grid grid-cols-4 gap-2">
                       {quickLinks.map((link) => (
                         <div
@@ -192,7 +171,7 @@ export function Intro({ onContinue }: IntroProps) {
                     <div className="bg-card rounded-2xl border border-border/50 p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <StickyNote className="w-4 h-4 text-accent" />
-                        <h3 className="font-medium text-sm">Notas Recentes</h3>
+                        <h3 className="font-medium text-sm">{t.introRecentNotes}</h3>
                       </div>
                       <div className="space-y-2">
                         {mockNotes.map((note) => (
@@ -205,7 +184,7 @@ export function Intro({ onContinue }: IntroProps) {
                     <div className="bg-card rounded-2xl border border-border/50 p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <Calendar className="w-4 h-4 text-orange-500" />
-                        <h3 className="font-medium text-sm">Agenda Hoje</h3>
+                        <h3 className="font-medium text-sm">{t.introTodayAgenda}</h3>
                       </div>
                       <div className="space-y-2">
                         {mockEvents.map((event) => (
@@ -222,7 +201,7 @@ export function Intro({ onContinue }: IntroProps) {
                   <div className="p-4 border-b border-border/50">
                     <div className="flex items-center gap-2">
                       <Bot className="w-4 h-4 text-accent" />
-                      <span className="font-medium text-sm">Ask Lumio</span>
+                      <span className="font-medium text-sm">{t.askLumioPanel}</span>
                     </div>
                   </div>
                   <div className="flex-1 p-4 space-y-4 overflow-hidden">
@@ -231,7 +210,7 @@ export function Intro({ onContinue }: IntroProps) {
                         <User className="w-3.5 h-3.5 text-accent" />
                       </div>
                       <div className="bg-card border border-border rounded-2xl rounded-tl-md px-3 py-2 max-w-[280px]">
-                        <p className="text-xs">O que diz o documento "Relatório Progresso.pdf" sobre o prazo?</p>
+                        <p className="text-xs">{t.introChatQuestion}</p>
                       </div>
                     </div>
                     <div className="flex gap-3">
@@ -239,10 +218,7 @@ export function Intro({ onContinue }: IntroProps) {
                         <Bot className="w-3.5 h-3.5 text-white" />
                       </div>
                       <div className="bg-accent/5 border border-accent/20 rounded-2xl rounded-tl-md px-3 py-2 max-w-[280px]">
-                        <p className="text-xs">
-                          No Relatório Progresso.pdf, o prazo para conclusão da fase 2 foi definido para 15 de Novembro de 2025. 
-                          Foi também mencionado que serão necessários testes antes da entrega.
-                        </p>
+                        <p className="text-xs">{t.introChatAnswer}</p>
                       </div>
                     </div>
                   </div>
@@ -250,7 +226,7 @@ export function Intro({ onContinue }: IntroProps) {
                     <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-2">
                       <input
                         type="text"
-                        placeholder="Perguntar ao Lumio..."
+                        placeholder={t.askLumio}
                         className="flex-1 bg-transparent text-xs outline-none"
                         disabled
                       />
@@ -269,11 +245,9 @@ export function Intro({ onContinue }: IntroProps) {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="mb-12"
         >
-          <h2 className="text-2xl font-semibold text-center mb-4">Porquê usar o Lumio?</h2>
+          <h2 className="text-2xl font-semibold text-center mb-4">{t.whyTitle}</h2>
           <p className="text-center text-muted-foreground max-w-3xl mx-auto">
-            Em vez de ter tudo espalhado por diferentes apps, o Lumio junta tudo num workspace inteligente. 
-            O teu assistente IA tem acesso a todo o teu conteúdo e ajuda-te a encontrar, resumir e organizar 
-            sem perder tempo à procura.
+            {t.whyText}
           </p>
         </motion.div>
 
@@ -312,11 +286,11 @@ export function Intro({ onContinue }: IntroProps) {
             onClick={onContinue}
             className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 min-h-11 bg-accent text-white rounded-xl text-base sm:text-lg font-medium hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
           >
-            Começar agora
+            {t.startNow}
             <ArrowRight className="w-5 h-5" />
           </motion.button>
           <p className="text-sm text-muted-foreground mt-4">
-            Tudo no teu dispositivo. Simples, rápido e privado.
+            {t.privacyNote}
           </p>
         </motion.div>
       </div>

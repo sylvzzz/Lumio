@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion'
 import { Construction } from 'lucide-react'
+import { useT } from '@/hooks/useUser'
 
 export function Inbox() {
+  const t = useT()
   return (
     <div className="max-w-4xl mx-auto">
       <motion.div
@@ -12,9 +14,9 @@ export function Inbox() {
         <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center mb-4">
           <Construction className="w-8 h-8 text-accent" />
         </div>
-        <h1 className="text-2xl font-semibold mb-2">Em desenvolvimento</h1>
+        <h1 className="text-2xl font-semibold mb-2">{t.inboxTitle}</h1>
         <p className="text-muted-foreground max-w-md">
-          A funcionalidade de emails ainda está em desenvolvimento. Em breve estará disponível.
+          {t.inboxText}
         </p>
       </motion.div>
     </div>

@@ -178,6 +178,140 @@ def _save_json(path: Path, data: Any) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+DEFAULT_LANG = "pt"
+
+# Strings do backend por idioma (contexto do assistente, pesquisa, etc.).
+_T = {
+    "pt": {
+        "days": ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"],
+        "to": "até",
+        "from": "de",
+        "all_day": "(dia inteiro)",
+        "all_days": "(dias inteiros)",
+        "multi_day": "(evento de vários dias)",
+        "omitted": "omitidos por falta de espaço",
+        "events": "eventos",
+        "tasks": "tarefas",
+        "notes": "notas",
+        "docs": "documentos",
+        "instructions": (
+            "INSTRUÇÕES: Este é o resumo dos dados pessoais do utilizador"
+            "{name}. Responde a perguntas naturais sobre estes dados, mesmo que a "
+            "pergunta use outras palavras. Faz tu os cálculos de datas (hoje, esta "
+            "semana, a próxima semana, em outubro, mês passado...). Eventos de "
+            "vários dias decorrem em todos os dias entre o início e o fim. Se algo "
+            "estiver relacionado com o pedido, usa-o. Só dizes que não tens "
+            "informação quando nada nos dados nem nos excertos de documentos "
+            "tiver relação com o pedido."
+        ),
+        "now_line": "Data e hora atuais:",
+        "agenda": "AGENDA (de {range}, por ordem cronológica):",
+        "no_events": "(sem eventos)",
+        "tasks_header": "TAREFAS:",
+        "no_tasks": "(sem tarefas)",
+        "notes_header": "NOTAS (mais recentes primeiro):",
+        "no_notes": "(sem notas)",
+        "docs_header": "DOCUMENTOS CARREGADOS (o conteúdo relevante aparece nos excertos seguintes):",
+        "no_docs": "(sem documentos)",
+        "keywords_prompt": (
+            "Gera até 10 palavras-chave e sinónimos (português e inglês) para "
+            "procurar, em documentos e notas pessoais, informação relacionada com "
+            "a pergunta. Responde só com as palavras separadas por espaços, sem "
+            "pontuação nem explicações."
+        ),
+        "verifier_prompt": (
+            "És um verificador. Recebes a pergunta de um utilizador, a resposta de um "
+            "assistente e uma lista de fontes candidatas. Indica que fontes foram "
+            "realmente usadas para dar a resposta. Uma fonte conta como usada se a "
+            "resposta se baseia nela, incluindo quando conclui que não há nada nela "
+            "(ex.: 'não tens eventos esta semana' usa o calendário). Se a resposta é "
+            "conversa geral, ou diz que não tem informação sobre o assunto, ou nenhuma "
+            "fonte é relevante, devolve []. Responde APENAS com um array JSON de ids, "
+            'por exemplo ["calendar"] ou [].'
+        ),
+        "verifier_question": "Pergunta",
+        "verifier_answer": "Resposta",
+        "verifier_sources": "Fontes candidatas",
+        "cand_calendar": "agenda / eventos do calendário do utilizador",
+        "cand_tasks": "lista de tarefas do utilizador",
+        "cand_notes": "notas do utilizador",
+        "cand_doc": "documento '{name}': {excerpt}",
+        "new_chat": "Nova conversa",
+        "src_page": "Página",
+        "src_note": "Nota",
+        "src_event": "Evento",
+        "src_task": "Tarefa",
+        "src_document": "Documento",
+    },
+    "en": {
+        "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "to": "to",
+        "from": "from",
+        "all_day": "(all day)",
+        "all_days": "(whole days)",
+        "multi_day": "(multi-day event)",
+        "omitted": "omitted for space",
+        "events": "events",
+        "tasks": "tasks",
+        "notes": "notes",
+        "docs": "documents",
+        "instructions": (
+            "INSTRUCTIONS: This is a summary of the user's personal data"
+            "{name}. Answer natural-language questions about this data, even when "
+            "the question uses other words. Do the date math yourself (today, this "
+            "week, next week, in October, last month...). Multi-day events span "
+            "every day between their start and end. If anything is related to the "
+            "request, use it. Only say you have no information when nothing in the "
+            "data or the document excerpts relates to the request."
+        ),
+        "now_line": "Current date and time:",
+        "agenda": "CALENDAR (from {range}, chronological order):",
+        "no_events": "(no events)",
+        "tasks_header": "TASKS:",
+        "no_tasks": "(no tasks)",
+        "notes_header": "NOTES (most recent first):",
+        "no_notes": "(no notes)",
+        "docs_header": "UPLOADED DOCUMENTS (relevant content appears in the excerpts below):",
+        "no_docs": "(no documents)",
+        "keywords_prompt": (
+            "Generate up to 10 keywords and synonyms (Portuguese and English) to "
+            "search, in personal documents and notes, for information related to "
+            "the question. Reply only with the words separated by spaces, no "
+            "punctuation or explanations."
+        ),
+        "verifier_prompt": (
+            "You are a verifier. You receive a user's question, an assistant's "
+            "answer and a list of candidate sources. State which sources were "
+            "actually used to give the answer. A source counts as used if the "
+            "answer relies on it, including when it concludes there is nothing in "
+            "it (e.g. 'you have no events this week' uses the calendar). If the "
+            "answer is general conversation, or says it has no information about "
+            "the topic, or no source is relevant, return []. Reply ONLY with a "
+            'JSON array of ids, for example ["calendar"] or [].'
+        ),
+        "verifier_question": "Question",
+        "verifier_answer": "Answer",
+        "verifier_sources": "Candidate sources",
+        "cand_calendar": "the user's calendar / schedule",
+        "cand_tasks": "the user's task list",
+        "cand_notes": "the user's notes",
+        "cand_doc": "document '{name}': {excerpt}",
+        "new_chat": "New Chat",
+        "src_page": "Page",
+        "src_note": "Note",
+        "src_event": "Event",
+        "src_task": "Task",
+        "src_document": "Document",
+    },
+}
+
+
+def _user_lang() -> str:
+    """Idioma configurado pelo utilizador (user.json); 'pt' por omissão."""
+    lang = (_load_json(USER_FILE, {}) or {}).get("language") or DEFAULT_LANG
+    return lang if lang in _T else DEFAULT_LANG
+
+
 def _sync_notes_and_calendar_to_files() -> None:
     _ensure_data_dir()
     files_dir = Path(FILES_DIR)
@@ -266,7 +400,7 @@ def get_chat_sessions() -> list[dict]:
         result.append(
             {
                 "id": chat_id,
-                "title": s.get("title") or "New Chat",
+                "title": s.get("title") or _T[_user_lang()]["new_chat"],
                 "messages": [
                     {**m, "id": m.get("id") or f"{chat_id}-{i}", "session": chat_id}
                     for i, m in enumerate(history)
@@ -280,13 +414,15 @@ def get_chat_sessions() -> list[dict]:
 
 @app.post("/chat-sessions/")
 def create_chat_session(body: dict) -> dict:
-    chat = create_chat(body.get("title") or "New Chat")
+    title = body.get("title") or _T[_user_lang()]["new_chat"]
+    chat = create_chat(title)
     return {**chat, "id": chat["chat_id"]}
 
 
 @app.post("/chat-messages/")
 def send_chat_message(req: ChatMessageReq) -> dict:
     query = req.content
+    lang = _user_lang()
     history = []
     chat = get_chat(req.session)
     if chat:
@@ -294,10 +430,10 @@ def send_chat_message(req: ChatMessageReq) -> dict:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        for_model, found = _model_sources(query)
-        model_res = rag._load_engine().answer(query, for_model, history)
+        for_model, found = _model_sources(query, lang)
+        model_res = rag._load_engine().answer(query, for_model, history, lang)
         answer = model_res.answer
-        sources = _used_sources(query, answer, found)
+        sources = _used_sources(query, answer, found, lang)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -335,7 +471,6 @@ def send_chat_message(req: ChatMessageReq) -> dict:
 # fazer"...). Os conteúdos de documentos longos vêm da pesquisa BM25, agora
 # alargada com palavras-chave/sinónimos gerados pelo próprio modelo.
 # ---------------------------------------------------------------------------
-_PT_DAYS = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"]
 _CONTEXT_PATH = "0-dados-do-utilizador"
 # Ficheiros internos gerados a partir de notas e eventos: nunca aparecem ao utilizador.
 _GENERATED_PREFIXES = ("note_", "event_")
@@ -370,18 +505,18 @@ def _one_line(text: Any, limit: int) -> str:
     return t if len(t) <= limit else t[: limit - 1] + "…"
 
 
-def _fit(lines: list[str], budget: int, what: str) -> list[str]:
+def _fit(lines: list[str], budget: int, what: str, lang: str) -> list[str]:
     out, used = [], 0
     for i, line in enumerate(lines):
         if used + len(line) + 1 > budget:
-            out.append(f"(+{len(lines) - i} {what} omitidos por falta de espaço)")
+            out.append(f"(+{len(lines) - i} {what} {_T[lang]['omitted']})")
             break
         out.append(line)
         used += len(line) + 1
     return out
 
 
-def _calendar_lines(today: datetime) -> tuple[list[str], str]:
+def _calendar_lines(today: datetime, lang: str) -> tuple[list[str], str]:
     lo, hi = today - timedelta(days=120), today + timedelta(days=400)
     rows = []
     for e in _load_json(CALENDAR_FILE, []):
@@ -395,28 +530,29 @@ def _calendar_lines(today: datetime) -> tuple[list[str], str]:
     rows.sort(key=lambda r: r[0])
 
     def day(d: datetime) -> str:
-        return f"{_PT_DAYS[d.weekday()]} {d:%d/%m/%Y}"
+        return f"{_T[lang]['days'][d.weekday()]} {d:%d/%m/%Y}"
 
     lines = []
     for s, en, e in rows:
         multi_day = en.date() > s.date()
         if e.get("all_day"):
-            when = f"{day(s)} até {day(en)} (dias inteiros)" if multi_day else f"{day(s)} (dia inteiro)"
+            when = f"{day(s)} {_T[lang]['to']} {day(en)} {_T[lang]['all_days']}" if multi_day else f"{day(s)} {_T[lang]['all_day']}"
         elif multi_day:
-            when = f"de {day(s)} {s:%H:%M} até {day(en)} {en:%H:%M} (evento de vários dias)"
+            when = f"{_T[lang]['from']} {day(s)} {s:%H:%M} {_T[lang]['to']} {day(en)} {en:%H:%M} {_T[lang]['multi_day']}"
         else:
             when = f"{day(s)} {s:%H:%M}–{en:%H:%M}"
         desc = _one_line(e.get("description"), 100)
         lines.append(f"- {when} | {_one_line(e.get('title'), 100)}" + (f" | {desc}" if desc else ""))
-    return lines, f"{lo:%d/%m/%Y} a {hi:%d/%m/%Y}"
+    return lines, f"{lo:%d/%m/%Y} {_T[lang]['to']} {hi:%d/%m/%Y}"
 
 
-def _user_data_context() -> MinimalSource:
+def _user_data_context(lang: str) -> MinimalSource:
+    t = _T[lang]
     now = _now_local()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     user = _load_json(USER_FILE, {}) or {}
 
-    cal, cal_range = _calendar_lines(today)
+    cal, cal_range = _calendar_lines(today, lang)
     tasks = _load_json(TASKS_FILE, [])
     pending = [f"- [ ] {_one_line(t.get('title'), 120)}" for t in tasks if not t.get("done")]
     done = [f"- [x] {_one_line(t.get('title'), 120)}" for t in tasks if t.get("done")][-15:]
@@ -437,23 +573,16 @@ def _user_data_context() -> MinimalSource:
         pass
 
     parts = [
-        "INSTRUÇÕES: Este é o resumo dos dados pessoais do utilizador"
-        + (f" ({user.get('name')})" if user.get("name") else "")
-        + ". Responde a perguntas naturais sobre estes dados, mesmo que a pergunta "
-        "use outras palavras. Faz tu os cálculos de datas (hoje, esta semana, a "
-        "próxima semana, em outubro, mês passado...). Eventos de vários dias "
-        "decorrem em todos os dias entre o início e o fim. Se algo estiver relacionado "
-        "com o pedido, usa-o. Só dizes que não tens informação quando nada nos "
-        "dados nem nos excertos de documentos tiver relação com o pedido.",
-        f"Data e hora atuais: {_PT_DAYS[now.weekday()]}, {now:%d/%m/%Y %H:%M}.",
-        f"AGENDA (de {cal_range}, por ordem cronológica):",
-        *(_fit(cal, 5000, "eventos") or ["(sem eventos)"]),
-        "TAREFAS:",
-        *(_fit(pending + done, 1500, "tarefas") or ["(sem tarefas)"]),
-        "NOTAS (mais recentes primeiro):",
-        *(_fit(note_lines, 2500, "notas") or ["(sem notas)"]),
-        "DOCUMENTOS CARREGADOS (o conteúdo relevante aparece nos excertos seguintes):",
-        *(_fit(docs, 800, "documentos") or ["(sem documentos)"]),
+        t["instructions"].format(name=f" ({user.get('name')})" if user.get("name") else ""),
+        f"{t['now_line']} {_T[lang]['days'][now.weekday()]}, {now:%d/%m/%Y %H:%M}.",
+        t["agenda"].format(range=cal_range),
+        *(_fit(cal, 5000, t["events"], lang) or [t["no_events"]]),
+        t["tasks_header"],
+        *(_fit(pending + done, 1500, t["tasks"], lang) or [t["no_tasks"]]),
+        t["notes_header"],
+        *(_fit(note_lines, 2500, t["notes"], lang) or [t["no_notes"]]),
+        t["docs_header"],
+        *(_fit(docs, 800, t["docs"], lang) or [t["no_docs"]]),
     ]
     text = "\n".join(parts)
     return MinimalSource(file_path=_CONTEXT_PATH, first_character_index=0,
@@ -472,14 +601,11 @@ def _llm_text(system: str, user: str, max_tokens: int = 120) -> str:
     return text.split("</think>")[-1].strip()
 
 
-def _search_keywords(query: str) -> str:
+def _search_keywords(query: str, lang: str) -> str:
     """Pede ao modelo palavras-chave e sinónimos para a pesquisa em documentos."""
     try:
         text = _llm_text(
-            "Gera até 10 palavras-chave e sinónimos (português e inglês) para "
-            "procurar, em documentos e notas pessoais, informação relacionada com "
-            "a pergunta. Responde só com as palavras separadas por espaços, sem "
-            "pontuação nem explicações.",
+            _T[lang]["keywords_prompt"],
             query[:500],
         )
         return " ".join(text.split())[:300]
@@ -487,15 +613,15 @@ def _search_keywords(query: str) -> str:
         return ""
 
 
-def _model_sources(query: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
+def _model_sources(query: str, lang: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
     """Devolve (fontes para o modelo, excertos encontrados na pesquisa)."""
     try:
-        keywords = _search_keywords(query)
+        keywords = _search_keywords(query, lang)
         found = rag.search(f"{query} {keywords}".strip(), 8).retrieved_sources
     except Exception:
         found = []
     found = [s for s in found if not Path(s.file_path).name.startswith("event_")][:5]
-    return [_user_data_context()] + found, found
+    return [_user_data_context(lang)] + found, found
 
 
 # --- Fontes mostradas ao utilizador: só o que o modelo realmente usou ---------
@@ -505,7 +631,7 @@ _SOURCE_LABELS = {
 }
 
 
-def _used_sources(query: str, answer: str, found: list[MinimalSource]) -> list[MinimalSource]:
+def _used_sources(query: str, answer: str, found: list[MinimalSource], lang: str) -> list[MinimalSource]:
     """Pergunta ao modelo que fontes sustentaram a resposta e devolve só essas.
 
     Falha em silêncio: se não for possível apurar, não se mostra nada
@@ -514,19 +640,19 @@ def _used_sources(query: str, answer: str, found: list[MinimalSource]) -> list[M
     if not answer.strip():
         return []
     try:
-        lang = (_load_json(USER_FILE, {}) or {}).get("language", "pt")
+        t = _T[lang]
         labels = _SOURCE_LABELS.get(lang, _SOURCE_LABELS["en"])
 
         # candidatos
         cands: dict[str, str] = {}
         if _load_json(CALENDAR_FILE, []):
-            cands["calendar"] = "agenda / eventos do calendário do utilizador"
+            cands["calendar"] = t["cand_calendar"]
         if _load_json(TASKS_FILE, []):
-            cands["tasks"] = "lista de tarefas do utilizador"
+            cands["tasks"] = t["cand_tasks"]
         note_chunks = [s for s in found if Path(s.file_path).name.startswith("note_")]
         if _load_json(NOTES_FILE, []) or note_chunks:
             extra = "; ".join(_one_line(s.content, 120) for s in note_chunks[:3])
-            cands["notes"] = "notas do utilizador" + (f" (ex.: {extra})" if extra else "")
+            cands["notes"] = t["cand_notes"] + (f" (ex.: {extra})" if extra else "")
         doc_by_id: dict[str, list[MinimalSource]] = {}
         for s in found:
             name = Path(s.file_path).name
@@ -536,22 +662,17 @@ def _used_sources(query: str, answer: str, found: list[MinimalSource]) -> list[M
             if key is None:
                 key = f"doc{len(doc_by_id) + 1}"
                 doc_by_id[key] = []
-                cands[key] = f"documento '{_original_name(name)}': {_one_line(s.content, 250)}"
+                cands[key] = t["cand_doc"].format(name=_original_name(name), excerpt=_one_line(s.content, 250))
             doc_by_id[key].append(s)
         if not cands:
             return []
 
         listing = "\n".join(f'- "{k}": {v}' for k, v in cands.items())
         raw = _llm_text(
-            "És um verificador. Recebes a pergunta de um utilizador, a resposta de um "
-            "assistente e uma lista de fontes candidatas. Indica que fontes foram "
-            "realmente usadas para dar a resposta. Uma fonte conta como usada se a "
-            "resposta se baseia nela, incluindo quando conclui que não há nada nela "
-            "(ex.: 'não tens eventos esta semana' usa o calendário). Se a resposta é "
-            "conversa geral, ou diz que não tem informação sobre o assunto, ou nenhuma "
-            "fonte é relevante, devolve []. Responde APENAS com um array JSON de ids, "
-            'por exemplo ["calendar"] ou [].',
-            f"Pergunta: {query[:500]}\n\nResposta: {answer[:1500]}\n\nFontes candidatas:\n{listing}",
+            t["verifier_prompt"],
+            f"{t['verifier_question']}: {query[:500]}\n\n"
+            f"{t['verifier_answer']}: {answer[:1500]}\n\n"
+            f"{t['verifier_sources']}:\n{listing}",
             max_tokens=60,
         )
         m = re.search(r"\[[^\]]*\]", raw)
@@ -591,6 +712,7 @@ def _source_files(sources: list) -> list[dict[str, str]]:
 @app.post("/chat-messages/stream/")
 def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
     query = req.content
+    lang = _user_lang()
     history = []
     chat = get_chat(req.session)
     if chat:
@@ -598,8 +720,8 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             history.append({"role": m.get("role"), "content": m.get("content", "")})
 
     try:
-        for_model, found = _model_sources(query)
-        tokens = rag._load_engine().answer_stream(query, for_model, history)
+        for_model, found = _model_sources(query, lang)
+        tokens = rag._load_engine().answer_stream(query, for_model, history, lang)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -614,7 +736,7 @@ def stream_chat_message(req: ChatMessageReq) -> StreamingResponse:
             return
 
         answer = "".join(parts).strip()
-        sources = _used_sources(query, answer, found)
+        sources = _used_sources(query, answer, found, lang)
         yield _sse("sources", {"files": _source_files(sources)})
         now = datetime.utcnow().isoformat() + "Z"
         user_msg = {
@@ -994,30 +1116,34 @@ def search(q: str = "") -> dict:
     if not q.strip():
         return {"results": []}
     query = q.strip().lower()
+    lang = _user_lang()
+    t = _T[lang]
 
     out = []
     seen = set()
 
+    # Keywords cover pt + en so matching works in either UI language;
+    # only the displayed title depends on the configured language.
     pages = [
-        {"title": "Início", "url": "/", "keywords": ["inicio", "home", "dashboard"]},
-        {"title": "Notas", "url": "/notes", "keywords": ["nota", "notas"]},
-        {"title": "Documentos", "url": "/documents", "keywords": ["documento", "documentos", "ficheiro", "ficheiros"]},
-        {"title": "Calendário", "url": "/calendar", "keywords": ["calendario", "agenda", "evento", "eventos"]},
-        {"title": "Tarefas", "url": "/tasks", "keywords": ["tarefa", "tarefas"]},
-        {"title": "Emails", "url": "/inbox", "keywords": ["email", "emails", "inbox"]},
-        {"title": "Lumio", "url": "/lumio", "keywords": ["lumio", "chat", "ia", "assistente"]},
-        {"title": "FAQ", "url": "/faq", "keywords": ["faq", "ajuda", "como usar", "perguntas"]},
+        {"title": {"pt": "Início", "en": "Home"}, "url": "/", "keywords": ["inicio", "home", "dashboard"]},
+        {"title": {"pt": "Notas", "en": "Notes"}, "url": "/notes", "keywords": ["nota", "notas", "note", "notes"]},
+        {"title": {"pt": "Documentos", "en": "Documents"}, "url": "/documents", "keywords": ["documento", "documentos", "document", "documents", "ficheiro", "ficheiros", "file", "files"]},
+        {"title": {"pt": "Calendário", "en": "Calendar"}, "url": "/calendar", "keywords": ["calendario", "agenda", "evento", "eventos", "calendar", "event", "events"]},
+        {"title": {"pt": "Tarefas", "en": "Tasks"}, "url": "/tasks", "keywords": ["tarefa", "tarefas", "task", "tasks"]},
+        {"title": {"pt": "Emails", "en": "Emails"}, "url": "/inbox", "keywords": ["email", "emails", "inbox"]},
+        {"title": {"pt": "Lumio", "en": "Lumio"}, "url": "/lumio", "keywords": ["lumio", "chat", "ia", "ai", "assistente", "assistant"]},
+        {"title": {"pt": "FAQ", "en": "FAQ"}, "url": "/faq", "keywords": ["faq", "ajuda", "help", "como usar", "how to use", "perguntas", "questions"]},
     ]
 
     for p in pages:
-        if query in p["title"].lower() or any(k in query for k in p["keywords"]):
+        if query in p["title"][lang].lower() or any(k in query for k in p["keywords"]):
             key = p["url"]
             if key not in seen:
                 out.append({
                     "id": key,
                     "type": "note",
-                    "title": p["title"],
-                    "preview": "Página",
+                    "title": p["title"][lang],
+                    "preview": t["src_page"],
                     "url": p["url"]
                 })
                 seen.add(key)
@@ -1031,7 +1157,7 @@ def search(q: str = "") -> dict:
                 out.append({
                     "id": nid,
                     "type": "note",
-                    "title": "Nota",
+                    "title": t["src_note"],
                     "preview": (n.get("content") or "").replace("\n", " ")[:80],
                     "url": "/notes"
                 })
@@ -1047,23 +1173,23 @@ def search(q: str = "") -> dict:
                 out.append({
                     "id": eid,
                     "type": "calendar",
-                    "title": e.get("title") or "Evento",
+                    "title": e.get("title") or t["src_event"],
                     "preview": (e.get("description") or e.get("title") or "")[:80],
                     "url": "/calendar"
                 })
                 seen.add(eid)
 
     tasks = _load_json(TASKS_FILE, [])
-    for t in tasks:
-        title = (t.get("title") or "").lower()
+    for tsk in tasks:
+        title = (tsk.get("title") or "").lower()
         if query in title:
-            tid = t.get("id") or ""
+            tid = tsk.get("id") or ""
             if tid not in seen:
                 out.append({
                     "id": tid,
                     "type": "note",
-                    "title": t.get("title") or "Tarefa",
-                    "preview": "Tarefa",
+                    "title": tsk.get("title") or t["src_task"],
+                    "preview": t["src_task"],
                     "url": "/tasks"
                 })
                 seen.add(tid)
@@ -1082,7 +1208,7 @@ def search(q: str = "") -> dict:
                         "id": path.name,
                         "type": "document",
                         "title": _original_name(path.name),
-                        "preview": "Documento",
+                        "preview": t["src_document"],
                         "url": "/documents"
                     })
                     seen.add(path.name)

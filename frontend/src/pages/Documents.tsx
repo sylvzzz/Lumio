@@ -84,7 +84,7 @@ export function Documents() {
     }
     setUploading(false)
     setUploadProgress(0)
-  }, [queryClient])
+  }, [queryClient, t.uploadedSuccessfully, t.uploadFailed, t.tryAgain])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()

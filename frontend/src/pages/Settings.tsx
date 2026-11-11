@@ -1,90 +1,16 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings as SettingsIcon, User, Moon, Sun, Monitor, Globe, Key, Palette } from 'lucide-react'
-import { useUser } from '@/hooks/useUser'
+import { useUser, useT } from '@/hooks/useUser'
+import { texts, type Lang } from '@/i18n'
 import { toast } from 'sonner'
 
 const ages = Array.from({ length: 83 }, (_, i) => i + 13)
 
-type Lang = 'pt' | 'en'
-
-// Traduções fora do componente: não são recriadas a cada render
-const texts = {
-  pt: {
-    title: 'Definições',
-    subtitle: 'Personaliza a tua experiência no Lumio',
-    profile: 'Perfil',
-    name: 'Nome',
-    age: 'Idade',
-    gender: 'Género',
-    not_specified: 'Não especificado',
-    male: 'Masculino',
-    female: 'Feminino',
-    prefer_not_to_say: 'Prefiro não dizer',
-    appearance: 'Aparência',
-    theme: 'Tema',
-    light: 'Claro',
-    dark: 'Escuro',
-    system: 'Sistema',
-    language: 'Idioma',
-    save: 'Guardar',
-    saving: 'A guardar...',
-    save_profile: 'Guardar perfil',
-    unsaved_changes: 'Tens alterações por guardar',
-    api_key_title: 'API Key',
-    api_key_description: 'Configura a tua chave API para usar o assistente IA',
-    api_key_placeholder: 'Insere a tua API key',
-    provider: 'Provider',
-    save_api_key: 'Guardar API Key',
-    settings_saved: 'Alterações guardadas',
-    settings_saved_description: 'As tuas definições foram guardadas com sucesso.',
-    settings_error: 'Erro ao guardar definições',
-    api_key_saved: 'API Key guardada',
-    api_key_saved_description: 'A tua chave foi guardada com sucesso.',
-    api_key_error: 'Erro ao guardar a API Key',
-  },
-  en: {
-    title: 'Settings',
-    subtitle: 'Personalize your Lumio experience',
-    profile: 'Profile',
-    name: 'Name',
-    age: 'Age',
-    gender: 'Gender',
-    not_specified: 'Not specified',
-    male: 'Male',
-    female: 'Female',
-    prefer_not_to_say: 'Prefer not to say',
-    appearance: 'Appearance',
-    theme: 'Theme',
-    light: 'Light',
-    dark: 'Dark',
-    system: 'System',
-    language: 'Language',
-    save: 'Save',
-    saving: 'Saving...',
-    save_profile: 'Save profile',
-    unsaved_changes: 'You have unsaved changes',
-    api_key_title: 'API Key',
-    api_key_description: 'Configure your API key to use the AI assistant',
-    api_key_placeholder: 'Enter your API key',
-    provider: 'Provider',
-    save_api_key: 'Save API Key',
-    settings_saved: 'Changes saved',
-    settings_saved_description: 'Your settings were saved successfully.',
-    settings_error: 'Error saving settings',
-    api_key_saved: 'API Key saved',
-    api_key_saved_description: 'Your key was saved successfully.',
-    api_key_error: 'Error saving API Key',
-  },
-} as const
-
-type TextKey = keyof typeof texts['pt']
-
 export function Settings() {
-  const { user } = useUser()
+  const { user, updateUser } = useUser()
+  const t = useT()
 
-  // Idioma APLICADO (usado na interface e no localStorage)
-  const [language, setLanguage] = useState<Lang>(() => (user?.language as Lang) ?? 'pt')
   // Idioma ESCOLHIDO no select (só passa a aplicado ao clicar em Guardar)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>(() => (user?.language as Lang) ?? 'pt')
 
@@ -113,8 +39,6 @@ export function Settings() {
     language: (user?.language as Lang) ?? 'pt',
   })
 
-  const getText = (key: TextKey) => texts[language][key]
-
   const isDirty =
     name !== saved.name ||
     age !== saved.age ||
@@ -133,15 +57,9 @@ export function Settings() {
     setName(next.name)
     setAge(next.age)
     setGender(next.gender)
-    setLanguage(lang)
     setSelectedLanguage(lang)
     setSaved(next)
   }, [user])
-
-  // Guarda no localStorage apenas o idioma aplicado
-  useEffect(() => {
-    localStorage.setItem('language', language)
-  }, [language])
 
   useEffect(() => {
     if (theme === 'system') {
@@ -170,16 +88,16 @@ export function Settings() {
       })
       if (!res.ok) throw new Error('Falha ao guardar')
 
-      // Só agora a interface muda de idioma e o botão desaparece
-      setLanguage(selectedLanguage)
+      // Propaga o idioma (e o perfil) para toda a aplicação instantaneamente
+      updateUser({ name, gender, age: age === '' ? null : age, language: selectedLanguage })
       setSaved({ name, age, gender, language: selectedLanguage })
 
-      toast.success(texts[selectedLanguage].settings_saved, {
-        description: texts[selectedLanguage].settings_saved_description,
+      toast.success(texts[selectedLanguage].settingsSaved, {
+        description: texts[selectedLanguage].settingsSavedDescription,
       })
     } catch (e) {
       console.error(e)
-      toast.error(texts[language].settings_error)
+      toast.error(t.settingsError)
     } finally {
       setIsSaving(false)
     }
@@ -195,12 +113,12 @@ export function Settings() {
       })
       if (!res.ok) throw new Error('Falha ao guardar')
       setApiKey('')
-      toast.success(getText('api_key_saved'), {
-        description: getText('api_key_saved_description'),
+      toast.success(t.apiKeySaved, {
+        description: t.apiKeySavedDescription,
       })
     } catch (e) {
       console.error(e)
-      toast.error(getText('api_key_error'))
+      toast.error(t.apiKeyError)
     }
   }
 
@@ -213,9 +131,9 @@ export function Settings() {
       >
         <div className="flex items-center gap-3 mb-2">
           <SettingsIcon className="w-6 h-6 text-accent" />
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{getText('title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{t.settingsPageTitle}</h1>
         </div>
-        <p className="text-muted-foreground">{getText('subtitle')}</p>
+        <p className="text-muted-foreground">{t.settingsSubtitle}</p>
       </motion.div>
 
       <div className="space-y-4">
@@ -227,11 +145,11 @@ export function Settings() {
         >
           <div className="flex items-center gap-2 p-4 border-b border-border/50">
             <User className="w-4 h-4 text-accent" />
-            <h2 className="font-medium">{getText('profile')}</h2>
+            <h2 className="font-medium">{t.profile}</h2>
           </div>
           <div className="p-4 space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">{getText('name')}</label>
+              <label className="text-sm font-medium mb-2 block">{t.name}</label>
               <input
                 type="text"
                 value={name}
@@ -241,29 +159,29 @@ export function Settings() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">{getText('age')}</label>
+                <label className="text-sm font-medium mb-2 block">{t.age}</label>
                 <select
                   value={age}
                   onChange={(e) => setAge(e.target.value === '' ? '' : parseInt(e.target.value))}
                   className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
-                  <option value="">{getText('not_specified')}</option>
+                  <option value="">{t.notSpecified}</option>
                   {ages.map((a) => (
                     <option key={a} value={a}>{a}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">{getText('gender')}</label>
+                <label className="text-sm font-medium mb-2 block">{t.gender}</label>
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
                   className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
                 >
-                  <option value="">{getText('not_specified')}</option>
-                  <option value="male">{getText('male')}</option>
-                  <option value="female">{getText('female')}</option>
-                  <option value="prefer_not_to_say">{getText('prefer_not_to_say')}</option>
+                  <option value="">{t.notSpecified}</option>
+                  <option value="male">{t.male}</option>
+                  <option value="female">{t.female}</option>
+                  <option value="prefer_not_to_say">{t.preferNotToSay}</option>
                 </select>
               </div>
             </div>
@@ -278,11 +196,11 @@ export function Settings() {
         >
           <div className="flex items-center gap-2 p-4 border-b border-border/50">
             <Palette className="w-4 h-4 text-accent" />
-            <h2 className="font-medium">{getText('appearance')}</h2>
+            <h2 className="font-medium">{t.appearance}</h2>
           </div>
           <div className="p-4 space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">{getText('theme')}</label>
+              <label className="text-sm font-medium mb-2 block">{t.theme}</label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={() => setTheme('light')}
@@ -291,7 +209,7 @@ export function Settings() {
                   }`}
                 >
                   <Sun className="w-4 h-4" />
-                  <span className="text-sm">{getText('light')}</span>
+                  <span className="text-sm">{t.light}</span>
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
@@ -300,7 +218,7 @@ export function Settings() {
                   }`}
                 >
                   <Moon className="w-4 h-4" />
-                  <span className="text-sm">{getText('dark')}</span>
+                  <span className="text-sm">{t.dark}</span>
                 </button>
                 <button
                   onClick={() => setTheme('system')}
@@ -309,12 +227,12 @@ export function Settings() {
                   }`}
                 >
                   <Monitor className="w-4 h-4" />
-                  <span className="text-sm">{getText('system')}</span>
+                  <span className="text-sm">{t.system}</span>
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">{getText('language')}</label>
+              <label className="text-sm font-medium mb-2 block">{t.language}</label>
               <div className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-muted-foreground" />
                 <select
@@ -338,14 +256,14 @@ export function Settings() {
         >
           <div className="flex items-center gap-2 p-4 border-b border-border/50">
             <Key className="w-4 h-4 text-accent" />
-            <h2 className="font-medium">{getText('api_key_title')}</h2>
+            <h2 className="font-medium">{t.apiKeyTitle}</h2>
           </div>
           <div className="p-4 space-y-4">
             <p className="text-sm text-muted-foreground">
-              {getText('api_key_description')}
+              {t.apiKeyDescription}
             </p>
             <div>
-              <label className="text-sm font-medium mb-2 block">{getText('provider')}</label>
+              <label className="text-sm font-medium mb-2 block">{t.provider}</label>
               <select
                 value={provider}
                 onChange={(e) => setProvider(e.target.value)}
@@ -357,12 +275,12 @@ export function Settings() {
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">{getText('api_key_title')}</label>
+              <label className="text-sm font-medium mb-2 block">{t.apiKeyTitle}</label>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={getText('api_key_placeholder')}
+                placeholder={t.apiKeyPlaceholder}
                 className="w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20"
               />
             </div>
@@ -371,7 +289,7 @@ export function Settings() {
               disabled={!apiKey.trim()}
               className="px-4 py-2 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
             >
-              {getText('save_api_key')}
+              {t.saveApiKey}
             </button>
           </div>
         </motion.div>
@@ -391,14 +309,14 @@ export function Settings() {
               transition={{ duration: 0.15 }}
               className="sticky bottom-[calc(1rem_+_env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 p-3 pl-4 bg-card rounded-2xl border border-border shadow-lg"
             >
-              <span className="text-sm text-muted-foreground">{getText('unsaved_changes')}</span>
+              <span className="text-sm text-muted-foreground">{t.unsavedChanges}</span>
               <button
                 onClick={saveProfile}
                 disabled={isSaving}
                 className="px-6 py-2.5 min-h-11 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                title={getText('save_profile')}
+                title={t.saveProfile}
               >
-                {isSaving ? getText('saving') : getText('save')}
+                {isSaving ? t.saving : t.saveProfile}
               </button>
             </motion.div>
           )}

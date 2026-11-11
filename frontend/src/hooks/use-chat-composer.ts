@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { api, type SourceFile } from '@/lib/api'
 import { useChatSessions } from '@/hooks/use-chat'
+import { currentLang } from '@/hooks/useUser'
+import { texts } from '@/i18n'
 
 export interface LocalMessage {
   id: string
@@ -64,7 +66,7 @@ export function useChatComposer() {
 
   const ensureSession = useCallback(async () => {
     if (currentSession?.id) return currentSession
-    const session = await api.chat.createSession()
+    const session = await api.chat.createSession(texts[currentLang()].newChat)
     queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
     return session
   }, [currentSession, queryClient])
@@ -198,7 +200,7 @@ export function useChatComposer() {
             if (!current.buffer) finish()
             else schedule()
           },
-          onError: (error) => {
+          onError: () => {
             const current = ensureState(session.id)
             current.final = {
               ...(current.final ?? {
@@ -209,7 +211,7 @@ export function useChatComposer() {
                 sources: [],
                 created_at: new Date().toISOString(),
               }),
-              content: current.display || `Sorry, ${error.message}`,
+              content: current.display || texts[currentLang()].streamError,
             }
             current.done = true
             current.buffer = ''
@@ -225,7 +227,7 @@ export function useChatComposer() {
           id: current.id,
           session: currentSession?.id || '',
           role: 'assistant',
-          content: current.display || "Sorry, I couldn't complete that answer.",
+          content: current.display || texts[currentLang()].sendError,
           sources: [],
           created_at: new Date().toISOString(),
         }
@@ -245,7 +247,7 @@ export function useChatComposer() {
     }
     streamRef.current = null
     setSending(false)
-    await api.chat.createSession()
+    await api.chat.createSession(texts[currentLang()].newChat)
     setLocalMessages([])
     queryClient.invalidateQueries({ queryKey: ['chat-sessions'] })
   }, [queryClient])

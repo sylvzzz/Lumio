@@ -116,7 +116,7 @@ export function Calendar() {
       else groups.push({ key, label: cal.dayLabel(new Date(event.start_time)), events: [event] })
     }
     return groups
-  }, [events, today])
+  }, [events, today, cal])
 
   const openEvent = (event: CalendarEvent) => {
     setSelectedEvent(event)
