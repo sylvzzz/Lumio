@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-# Cópia intocada: o bind mount de /app/data sombreia o conteúdo da imagem.
+# Untouched copy: the /app/data bind mount shadows the image contents.
 RUN mkdir data_src && cp -r data/shared data_src/
 
 EXPOSE 8000

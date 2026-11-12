@@ -1,5 +1,7 @@
 const API_BASE = '/api'
-const LOGIN_URL = `${API_BASE}/login`   // confirma que este é o URL certo
+// Without a session we go back to '/': AuthGate shows the login screen (password or Google).
+const LOGIN_URL = '/'
+export const GOOGLE_LOGIN_URL = `${API_BASE}/login`
 
 function redirectToLogin(): never {
   window.location.href = LOGIN_URL
@@ -153,9 +155,102 @@ export interface AuthUser {
   name?: string
 }
 
+export type LoginErrorCode =
+  | 'invalid' | 'rate_limited' | 'failed'
+  | 'not_allowed' | 'email_taken' | 'too_short' | 'too_long' | 'too_weak' | 'invalid_email'
+export class LoginError extends Error {
+  code: LoginErrorCode
+  retryAfter?: number
+  constructor(code: LoginErrorCode, retryAfter?: number) {
+    super(code)
+    this.code = code
+    this.retryAfter = retryAfter
+  }
+}
+
+export type PasswordErrorCode =
+  | 'too_short' | 'too_long' | 'too_weak' | 'wrong_current_password' | 'rate_limited' | 'failed'
+export class PasswordError extends Error {
+  code: PasswordErrorCode
+  constructor(code: PasswordErrorCode) {
+    super(code)
+    this.code = code
+  }
+}
+
+const JSON_HEADERS = { 'Content-Type': 'application/json' }
+
 export const api = {
   auth: {
     me: () => fetchJSON<AuthUser>('/me', false),
+    login: async (email: string, password: string): Promise<AuthUser> => {
+      let res: Response
+      try {
+        res = await apiFetch('/auth/login', {
+          method: 'POST',
+          headers: JSON_HEADERS,
+          body: JSON.stringify({ email, password }),
+        }, false)
+      } catch {
+        throw new LoginError('failed')
+      }
+      if (res.ok) return res.json()
+      if (res.status === 401) throw new LoginError('invalid')
+      if (res.status === 429) {
+        throw new LoginError('rate_limited', Number(res.headers.get('Retry-After')) || undefined)
+      }
+      throw new LoginError('failed')
+    },
+    register: async (name: string, email: string, password: string): Promise<AuthUser> => {
+      let res: Response
+      try {
+        res = await apiFetch('/auth/register', {
+          method: 'POST',
+          headers: JSON_HEADERS,
+          body: JSON.stringify({ name, email, password }),
+        }, false)
+      } catch {
+        throw new LoginError('failed')
+      }
+      if (res.ok) return res.json()
+      const detail = (await res.json().catch(() => ({})))?.detail
+      if (res.status === 403) throw new LoginError('not_allowed')
+      if (res.status === 409) throw new LoginError('email_taken')
+      if (res.status === 422 && ['too_short', 'too_long', 'too_weak', 'invalid_email'].includes(detail)) {
+        throw new LoginError(detail)
+      }
+      if (res.status === 429) {
+        throw new LoginError('rate_limited', Number(res.headers.get('Retry-After')) || undefined)
+      }
+      throw new LoginError('failed')
+    },
+    passwordStrength: async (password: string, email: string, signal?: AbortSignal): Promise<number> => {
+      const res = await apiFetch('/auth/password-strength', {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ password, email }),
+        signal,
+      }, false)
+      if (!res.ok) throw new Error(`strength: ${res.status}`)
+      return (await res.json()).score as number
+    },
+    hasPassword: async (): Promise<boolean> =>
+      (await fetchJSON<{ has_password: boolean }>('/auth/password')).has_password,
+    setPassword: async (newPassword: string, currentPassword?: string): Promise<void> => {
+      const res = await apiFetch('/auth/password', {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ new_password: newPassword, current_password: currentPassword }),
+      }, false)
+      if (res.ok) return
+      const detail = (await res.json().catch(() => ({})))?.detail
+      if (res.status === 422 && (detail === 'too_short' || detail === 'too_long' || detail === 'too_weak')) {
+        throw new PasswordError(detail)
+      }
+      if (res.status === 403) throw new PasswordError('wrong_current_password')
+      if (res.status === 429) throw new PasswordError('rate_limited')
+      throw new PasswordError('failed')
+    },
     logout: async () => {
       try {
         await apiFetch('/logout', { method: 'POST' }, false)

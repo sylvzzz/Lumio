@@ -11,8 +11,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    google_id TEXT UNIQUE NOT NULL,
+    google_id TEXT UNIQUE,            -- NULL for password-only accounts
     email TEXT UNIQUE NOT NULL,
+    password_hash TEXT,               -- Argon2id PHC string; NULL for Google-only accounts
+    password_updated_at TIMESTAMPTZ,
     name TEXT,
     gender TEXT,
     age INTEGER,
@@ -277,3 +279,61 @@ END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION lumio_login(TEXT, TEXT) FROM PUBLIC;
+
+
+-- ==========================================
+-- PASSWORD LOGIN (SECURITY DEFINER)
+-- ==========================================
+-- Like lumio_login, these run before the session knows the user id, so they
+-- bypass RLS. The password hash never leaves the database except through
+-- lumio_get_credentials, and the app never selects it in normal queries.
+
+CREATE OR REPLACE FUNCTION lumio_get_credentials(p_email TEXT)
+RETURNS TABLE (id UUID, name TEXT, password_hash TEXT)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT u.id, u.name, u.password_hash FROM users u WHERE u.email = p_email;
+$$;
+
+CREATE OR REPLACE FUNCTION lumio_set_password(p_email TEXT, p_hash TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE uid UUID;
+BEGIN
+    INSERT INTO users (email, password_hash, password_updated_at)
+    VALUES (p_email, p_hash, NOW())
+    ON CONFLICT (email) DO UPDATE
+        SET password_hash = EXCLUDED.password_hash,
+            password_updated_at = NOW()
+    RETURNING id INTO uid;
+    RETURN uid;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION lumio_get_credentials(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION lumio_set_password(TEXT, TEXT) FROM PUBLIC;
+
+-- Self-service signup. Fails (returns NULL) if the email already has an account,
+-- so nobody can take over an existing (e.g. Google) account by "registering" it.
+CREATE OR REPLACE FUNCTION lumio_register(p_email TEXT, p_name TEXT, p_hash TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE uid UUID;
+BEGIN
+    INSERT INTO users (email, name, password_hash, password_updated_at)
+    VALUES (p_email, p_name, p_hash, NOW())
+    ON CONFLICT (email) DO NOTHING
+    RETURNING id INTO uid;
+    RETURN uid;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION lumio_register(TEXT, TEXT, TEXT) FROM PUBLIC;

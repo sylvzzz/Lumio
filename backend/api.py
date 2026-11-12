@@ -13,8 +13,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from src import auth
 from src.db import DB
 from src.logger import FatalError
 from src.models import MinimalSource
@@ -30,12 +31,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# authorized mails, app is multi user now so this is optional
+# Authorized emails. If ALLOWED_EMAILS is missing or empty, any email can
+# create an account and sign in (open signup).
+ALLOWED_EMAILS = {
+    e.strip().lower() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()
+}
+OPEN_SIGNUP = not ALLOWED_EMAILS
 
-_raw_emails = os.environ.get("ALLOWED_EMAILS", "")
-ALLOWED_EMAILS = {e.strip().lower() for e in _raw_emails.split(",") if e.strip()}
+
+def email_allowed(email: str) -> bool:
+    return OPEN_SIGNUP or email in ALLOWED_EMAILS
+
+
+if OPEN_SIGNUP:
+    print("WARNING: ALLOWED_EMAILS is empty -> any email can create an account.", flush=True)
 OAUTH_REDIRECT_URI = os.environ["OAUTH_REDIRECT_URI"]
-PUBLIC_PATHS = {"/login", "/auth/callback", "/status"} 
+PUBLIC_PATHS = {"/login", "/auth/callback", "/auth/login", "/auth/register", "/auth/password-strength", "/status"}
 
 ALLOWED_SUFFIXES = (".pdf", ".docx", ".md", ".txt")
 
@@ -56,13 +67,13 @@ class AuthGateMiddleware(BaseHTTPMiddleware):
         if request.url.path in PUBLIC_PATHS or request.session.get("user"):
             return await call_next(request)
         if "text/html" in request.headers.get("accept", ""):
-            return RedirectResponse("/api/login")   # navegação direta no browser
+            return RedirectResponse("/")            # direct browser navigation -> SPA shows the login screen
         return JSONResponse({"detail": "unauthorized"}, status_code=401)
 
-app.add_middleware(AuthGateMiddleware)   # mais interior
-app.add_middleware(PrefixMiddleware)     # (a tua classe existente)
+app.add_middleware(AuthGateMiddleware)   # innermost
+app.add_middleware(PrefixMiddleware)     # (existing class)
 app.add_middleware(
-    SessionMiddleware,                   # mais exterior
+    SessionMiddleware,                   # outermost
     secret_key=os.environ["SESSION_SECRET"],
     https_only=os.getenv("DEV") != "1",
     same_site="lax",
@@ -74,7 +85,7 @@ DATA_DIR = Path("data")
 
 
 def _ensure_shared_knowledge() -> None:
-    """Repõe data/shared a partir da imagem (bind mount sombreia /app/data)."""
+    """Restores data/shared from the image (bind mount shadows /app/data)."""
     src = Path("data_src/shared")
     if not src.is_dir():
         return
@@ -88,12 +99,12 @@ def _ensure_shared_knowledge() -> None:
 _ensure_shared_knowledge()
 
 
-# Cliente LLM partilhado por todos os utilizadores (não guarda estado por user).
+# LLM client shared by all users (holds no per-user state).
 _engine: Model | None = None
 _engine_lock = threading.Lock()
 
-# Instância de RAG por utilizador: pastas e índices isolados.
-# ponytail: dicionário em memória sem expiração; evict LRU se houver muitos users.
+# One RAG instance per user: isolated folders and indexes.
+# ponytail: in-memory dict without expiry; add LRU eviction if there are many users.
 _rags: dict[str, RAG] = {}
 _rags_lock = threading.Lock()
 
@@ -107,7 +118,7 @@ def _load_engine() -> Model:
 
 
 def _rag(request: Request) -> RAG:
-    """RAG do utilizador; indexa os seus ficheiros na primeira utilização."""
+    """User's RAG; indexes their files on first use."""
     uid = _uid(request)
     with _rags_lock:
         rag = _rags.get(uid)
@@ -195,16 +206,156 @@ async def auth_callback(request: Request):
         return RedirectResponse("/auth-error?reason=failed")
     info = token.get("userinfo") or {}
     email = (info.get("email") or "").lower()
-    if not info.get("email_verified") or (ALLOWED_EMAILS and email not in ALLOWED_EMAILS):
+    if not info.get("email_verified") or not email_allowed(email):
         return RedirectResponse("/auth-error?reason=not_found")
     try:
         with DB() as db:
+            if OPEN_SIGNUP:
+                _drop_unverified_password(db, email)
             user_id = db.login(email, info.get("sub"))
     except Exception:
         return RedirectResponse("/auth-error?reason=failed")
     request.session.clear()
     request.session["user"] = {"id": user_id, "email": email, "name": info.get("name")}
     return RedirectResponse("/")
+
+def _drop_unverified_password(db: DB, email: str) -> None:
+    """Open signup: a password on an account never linked to Google was set without
+    proving the email belongs to whoever created it. When the real owner signs in
+    with Google (verified email), the old password is deleted so whoever registered
+    someone else's email does not keep access to their account."""
+    cred = db.get_credentials(email)
+    if not cred or not cred["password_hash"]:
+        return
+    with DB(cred["id"]) as owner:
+        user = owner.get_user() or {}
+        if not user.get("google_id"):
+            owner.clear_password_hash()
+
+
+login_throttle = auth.LoginThrottle(max_failures=5, window_s=15 * 60)
+
+
+class PasswordLogin(BaseModel):
+    email: str
+    password: str
+
+
+class PasswordRegister(BaseModel):
+    name: str = ""
+    email: str
+    password: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str | None = None
+    new_password: str
+
+
+def _start_session(request: Request, user_id: str, email: str, name: str | None) -> dict:
+    request.session.clear()
+    user = {"id": user_id, "email": email, "name": name}
+    request.session["user"] = user
+    return user
+
+
+@app.post("/auth/login")
+def password_login(body: PasswordLogin, request: Request) -> dict:
+    email = body.email.strip().lower()
+    wait = login_throttle.retry_after(email)
+    if wait:
+        raise HTTPException(status_code=429, detail="too_many_attempts",
+                            headers={"Retry-After": str(wait)})
+
+    cred = None
+    if email_allowed(email):
+        with DB() as db:
+            cred = db.get_credentials(email)
+    ok, new_hash = auth.verify_password(cred["password_hash"] if cred else None, body.password)
+    if not ok or not cred:
+        login_throttle.fail(email)
+        raise HTTPException(status_code=401, detail="invalid_credentials")
+
+    login_throttle.reset(email)
+    if new_hash:  # Argon2 parameters changed since the hash was created
+        with DB(cred["id"]) as db:
+            db.set_password_hash(new_hash)
+    return _start_session(request, cred["id"], email, cred.get("name"))
+
+
+class PasswordStrengthQuery(BaseModel):
+    password: str = Field(max_length=auth.MAX_PASSWORD_LEN)
+    email: str = Field(default="", max_length=254)
+
+
+@app.post("/auth/password-strength")
+def password_strength(body: PasswordStrengthQuery) -> dict:
+    score = auth.password_score(body.password, [body.email]) if body.password else 0
+    return {"score": score, "label": auth.STRENGTH_LABELS[score], "min_score": auth.MIN_SCORE}
+
+
+@app.post("/auth/register")
+def password_register(body: PasswordRegister, request: Request) -> dict:
+    """Registers account (if ALLOWED_EMAILS is empty accepts every email)."""
+    email = body.email.strip().lower()
+    name = body.name.strip()[:100] or None
+    wait = login_throttle.retry_after(f"reg:{email}")
+    if wait:
+        raise HTTPException(status_code=429, detail="too_many_attempts",
+                            headers={"Retry-After": str(wait)})
+    if "@" not in email or len(email) > 254:
+        raise HTTPException(status_code=422, detail="invalid_email")
+    problem = auth.validate_password(body.password, [email, name or ""])
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
+
+    if not email_allowed(email):
+        login_throttle.fail(f"reg:{email}")
+        raise HTTPException(status_code=403, detail="not_allowed")
+    with DB() as db:
+        user_id = db.register(email, name, auth.hash_password(body.password))
+    if not user_id:
+        login_throttle.fail(f"reg:{email}")
+        raise HTTPException(status_code=409, detail="email_taken")
+    return _start_session(request, user_id, email, name)
+
+
+@app.get("/auth/password")
+def password_status(request: Request) -> dict:
+    with DB(_uid(request)) as db:
+        return {"has_password": bool(db.get_password_hash())}
+
+
+@app.post("/auth/password")
+def set_password(body: PasswordChange, request: Request) -> dict:
+    """Set or change the account password while signed in.
+
+    If a password already exists, the current one is required; Google-only
+    accounts (valid Google session) may set the first one without it.
+    """
+    uid = _uid(request)
+    email = request.session["user"]["email"]
+
+    problem = auth.validate_password(body.new_password, [email])
+    if problem:
+        raise HTTPException(status_code=422, detail=problem)
+
+    wait = login_throttle.retry_after(email)
+    if wait:
+        raise HTTPException(status_code=429, detail="too_many_attempts",
+                            headers={"Retry-After": str(wait)})
+
+    with DB(uid) as db:
+        current = db.get_password_hash()
+        if current:
+            ok, _ = auth.verify_password(current, body.current_password or "")
+            if not ok:
+                login_throttle.fail(email)
+                raise HTTPException(status_code=403, detail="wrong_current_password")
+        db.set_password_hash(auth.hash_password(body.new_password))
+    login_throttle.reset(email)
+    return {}
+
 
 @app.get("/me")
 def me(request: Request) -> dict:
@@ -218,7 +369,6 @@ def logout(request: Request) -> dict:
 
 
 def _uid(request: Request) -> str:
-    """User id da sessão; sessões pré-migração não o têm -> novo login."""
     uid = request.session.get("user", {}).get("id")
     if not uid:
         raise HTTPException(status_code=401, detail="re-login required")
@@ -226,7 +376,7 @@ def _uid(request: Request) -> str:
 
 
 def _user_lang(request: Request) -> str:
-    """Idioma configurado pelo utilizador (tabela users); 'pt' por omissão."""
+    """Language configured by the user (users table); 'pt' by default."""
     with DB(_uid(request)) as db:
         lang = (db.get_user() or {}).get("language") or DEFAULT_LANG
     return lang if lang in _T else DEFAULT_LANG
@@ -234,7 +384,7 @@ def _user_lang(request: Request) -> str:
 
 DEFAULT_LANG = "pt"
 
-# Strings do backend por idioma (contexto do assistente, pesquisa, etc.).
+# Backend strings per language (assistant context, search, etc.).
 _T = {
     "pt": {
         "days": ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"],
@@ -387,7 +537,7 @@ def _sync_notes_and_calendar_to_files(request: Request) -> None:
             f.write(text)
         with open(f"{path}.meta.json", "w", encoding="utf-8") as f:
             json.dump({"original_name": f"Evento - {title}.txt"}, f)
-    # Remove ficheiros gerados de notas/eventos já apagados.
+    # Remove generated files for notes/events that were deleted.
     for p in files_dir.iterdir():
         if p.is_file() and p.name.startswith(_GENERATED_PREFIXES) and p.name not in keep:
             p.unlink(missing_ok=True)
@@ -510,23 +660,23 @@ def send_chat_message(req: ChatMessageReq, request: Request) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Assistente com acesso aos dados do utilizador.
+# Assistant with access to the user's data.
 #
-# Em vez de adivinhar palavras-chave, o modelo recebe sempre um resumo dos
-# dados pessoais (agenda, tarefas, notas, lista de documentos) + a data de
-# hoje, e raciocina sobre eles ("esta semana", "em outubro", "o que falta
-# fazer"...). Os conteúdos de documentos longos vêm da pesquisa BM25, agora
-# alargada com palavras-chave/sinónimos gerados pelo próprio modelo.
+# Instead of guessing keywords, the model always receives a summary of the
+# personal data (calendar, tasks, notes, document list) + today's date, and
+# reasons over it ("this week", "in October", "what's left to do"...). Long
+# document contents come from the BM25 search, now extended with keywords and
+# synonyms generated by the model itself.
 # ---------------------------------------------------------------------------
 _CONTEXT_PATH = "0-dados-do-utilizador"
-# Ficheiros internos gerados a partir de notas e eventos: nunca aparecem ao utilizador.
+# Internal files generated from notes and events: never shown to the user.
 _GENERATED_PREFIXES = ("note_", "event_")
 
 
 try:
     from zoneinfo import ZoneInfo
     _LOCAL_TZ = ZoneInfo(os.getenv("LUMIO_TZ", "Europe/Lisbon"))
-except Exception:  # sem base de dados de fusos no sistema
+except Exception:  # no timezone database on the system
     _LOCAL_TZ = timezone.utc
 
 
@@ -535,7 +685,7 @@ def _now_local() -> datetime:
 
 
 def _parse_dt(value: Any) -> datetime | None:
-    """Lê uma data ISO; valores com fuso (ex.: 'Z') são convertidos para a hora local."""
+    """Read an ISO date; values with a timezone (e.g. 'Z') are converted to local time."""
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -564,7 +714,7 @@ def _fit(lines: list[str], budget: int, what: str, lang: str) -> list[str]:
 
 
 def _to_aware(value: Any) -> datetime | None:
-    """Lê uma data ISO; valores sem fuso são interpretados na hora local."""
+    """Read an ISO date; values without a timezone are interpreted as local time."""
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -658,7 +808,7 @@ def _llm_text(system: str, user: str, max_tokens: int = 120) -> str:
 
 
 def _search_keywords(query: str, lang: str) -> str:
-    """Pede ao modelo palavras-chave e sinónimos para a pesquisa em documentos."""
+    """Ask the model for keywords and synonyms to search documents."""
     try:
         text = _llm_text(
             _T[lang]["keywords_prompt"],
@@ -670,7 +820,7 @@ def _search_keywords(query: str, lang: str) -> str:
 
 
 def _model_sources(request: Request, query: str, lang: str) -> tuple[list[MinimalSource], list[MinimalSource]]:
-    """Devolve (fontes para o modelo, excertos encontrados na pesquisa)."""
+    """Return (sources for the model, excerpts found by the search)."""
     try:
         keywords = _search_keywords(query, lang)
         found = _rag(request).search(f"{query} {keywords}".strip(), 8).retrieved_sources
@@ -680,7 +830,7 @@ def _model_sources(request: Request, query: str, lang: str) -> tuple[list[Minima
     return [_user_data_context(request, lang)] + found, found
 
 
-# --- Fontes mostradas ao utilizador: só o que o modelo realmente usou ---------
+# --- Sources shown to the user: only what the model actually used ------------
 _SOURCE_LABELS = {
     "pt": {"calendar": "Calendário", "tasks": "Tarefas", "notes": "Notas"},
     "en": {"calendar": "Calendar", "tasks": "Tasks", "notes": "Notes"},
@@ -689,10 +839,10 @@ _SOURCE_LABELS = {
 
 def _used_sources(request: Request, query: str, answer: str,
                   found: list[MinimalSource], lang: str) -> list[MinimalSource]:
-    """Pergunta ao modelo que fontes sustentaram a resposta e devolve só essas.
+    """Ask the model which sources supported the answer and return only those.
 
-    Falha em silêncio: se não for possível apurar, não se mostra nada
-    (preferível a mostrar ficheiros que não têm nada a ver).
+    Fails silently: if it cannot be determined, nothing is shown (better than
+    showing unrelated files).
     """
     if not answer.strip():
         return []
@@ -704,7 +854,7 @@ def _used_sources(request: Request, query: str, answer: str,
             has_tasks = bool(db.list_tasks())
             has_notes = bool(db.list_notes())
 
-        # candidatos
+        # candidates
         cands: dict[str, str] = {}
         if has_events:
             cands["calendar"] = t["cand_calendar"]

@@ -4,17 +4,17 @@ set -e
 
 sudo apt update
 
-# Instalar UFW
+# Install UFW
 sudo apt install -y ufw
 sudo ufw allow 443
 
-# Instalar Make
+# Install Make
 sudo apt install -y make
 
-# Instalar dependências Docker
+# Install Docker dependencies
 sudo apt install -y ca-certificates curl
 
-# Adicionar repositório Docker
+# Add Docker repository
 sudo install -m 0755 -d /etc/apt/keyrings
 
 sudo curl -fsSL https://download.docker.com/linux/debian/gpg \
@@ -26,12 +26,12 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt update
 
-# Instalar Docker
+# Install Docker
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# Ativar serviços
+# Enable services
 sudo systemctl enable --now docker
 
-# Configurar UFW
+# Configure UFW
 sudo ufw allow OpenSSH
 sudo ufw --force enable

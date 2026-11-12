@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Settings as SettingsIcon, User, Moon, Sun, Monitor, Globe, Key, Palette } from 'lucide-react'
+import { Settings as SettingsIcon, User, Moon, Sun, Monitor, Globe, Key, Palette, Lock } from 'lucide-react'
 import { useUser, useT } from '@/hooks/useUser'
 import { texts, type Lang } from '@/i18n'
 import { toast } from 'sonner'
+import { api, PasswordError } from '@/lib/api'
+import { PasswordStrength, MIN_ACCEPTED_SCORE } from '@/components/PasswordStrength'
 
 const ages = Array.from({ length: 83 }, (_, i) => i + 13)
 
@@ -11,7 +13,7 @@ export function Settings() {
   const { user, updateUser } = useUser()
   const t = useT()
 
-  // Idioma ESCOLHIDO no select (só passa a aplicado ao clicar em Guardar)
+  // Language SELECTED in the dropdown (only applied when Save is clicked)
   const [selectedLanguage, setSelectedLanguage] = useState<Lang>(() => (user?.language as Lang) ?? 'pt')
 
   const [name, setName] = useState(user?.name || '')
@@ -26,7 +28,20 @@ export function Settings() {
   const [apiKey, setApiKey] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  // Últimos valores guardados: serve de comparação para saber se há alterações
+  // Login password (Argon2id on the backend). null = still loading.
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwError, setPwError] = useState<string | null>(null)
+  const [pwScore, setPwScore] = useState<number | null>(null)
+  const [pwSaving, setPwSaving] = useState(false)
+
+  useEffect(() => {
+    api.auth.hasPassword().then(setHasPassword).catch(() => setHasPassword(null))
+  }, [])
+
+  // Last saved values: used to compare and detect changes
   const [saved, setSaved] = useState<{
     name: string
     age: number | ''
@@ -45,7 +60,7 @@ export function Settings() {
     gender !== saved.gender ||
     selectedLanguage !== saved.language
 
-  // Sincroniza tudo quando o utilizador carrega/atualiza
+  // Sync everything when the user loads/refreshes
   useEffect(() => {
     const lang = (user?.language as Lang) ?? 'pt'
     const next = {
@@ -88,7 +103,7 @@ export function Settings() {
       })
       if (!res.ok) throw new Error('Falha ao guardar')
 
-      // Propaga o idioma (e o perfil) para toda a aplicação instantaneamente
+      // Propagate the language (and profile) to the whole app instantly
       updateUser({ name, gender, age: age === '' ? null : age, language: selectedLanguage })
       setSaved({ name, age, gender, language: selectedLanguage })
 
@@ -121,6 +136,38 @@ export function Settings() {
       toast.error(t.apiKeyError)
     }
   }
+
+  const savePassword = async () => {
+    if (pwSaving) return
+    setPwError(null)
+    if (newPw.length < 10) return setPwError(t.passwordTooShort)
+    if (pwScore === null || pwScore < MIN_ACCEPTED_SCORE) return setPwError(t.passwordTooWeak)
+    if (newPw !== confirmPw) return setPwError(t.passwordMismatch)
+    setPwSaving(true)
+    try {
+      await api.auth.setPassword(newPw, hasPassword ? currentPw : undefined)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      setHasPassword(true)
+      toast.success(t.passwordSaved, { description: t.passwordSavedDescription })
+    } catch (e) {
+      const code = e instanceof PasswordError ? e.code : 'failed'
+      setPwError(
+        code === 'too_short' ? t.passwordTooShort
+        : code === 'too_long' ? t.passwordTooLong
+        : code === 'too_weak' ? t.passwordTooWeak
+        : code === 'wrong_current_password' ? t.passwordWrongCurrent
+        : code === 'rate_limited' ? t.loginRateLimited
+        : t.passwordError,
+      )
+    } finally {
+      setPwSaving(false)
+    }
+  }
+
+  const pwInputClass =
+    'w-full h-11 sm:h-10 px-3 bg-background rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-accent/20'
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -294,10 +341,79 @@ export function Settings() {
           </div>
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-card rounded-2xl border border-border/50 overflow-hidden"
+        >
+          <div className="flex items-center gap-2 p-4 border-b border-border/50">
+            <Lock className="w-4 h-4 text-accent" />
+            <h2 className="font-medium">{t.securityTitle}</h2>
+          </div>
+          <form
+            className="p-4 space-y-4"
+            onSubmit={(e) => { e.preventDefault(); savePassword() }}
+          >
+            <p className="text-sm text-muted-foreground">
+              {hasPassword ? t.securityDescriptionChange : t.securityDescription}
+            </p>
+            {/* Hidden username field: helps password managers associate the password with the email */}
+            <input type="text" autoComplete="username" value={user?.email ?? ''} readOnly hidden />
+            {hasPassword && (
+              <div>
+                <label htmlFor="pw-current" className="text-sm font-medium mb-2 block">{t.currentPassword}</label>
+                <input
+                  id="pw-current"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  className={pwInputClass}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="pw-new" className="text-sm font-medium mb-2 block">{t.newPassword}</label>
+              <input
+                id="pw-new"
+                type="password"
+                autoComplete="new-password"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                className={pwInputClass}
+              />
+            </div>
+            <PasswordStrength password={newPw} email={user?.email ?? ''} onScore={setPwScore} />
+            <div>
+              <label htmlFor="pw-confirm" className="text-sm font-medium mb-2 block">{t.confirmPassword}</label>
+              <input
+                id="pw-confirm"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPw}
+                onChange={(e) => setConfirmPw(e.target.value)}
+                className={pwInputClass}
+              />
+            </div>
+            {pwError && <p role="alert" className="text-sm text-destructive">{pwError}</p>}
+            <button
+              type="submit"
+              disabled={
+                pwSaving || !newPw || !confirmPw || (hasPassword === true && !currentPw) ||
+                pwScore === null || pwScore < MIN_ACCEPTED_SCORE
+              }
+              className="px-4 py-2 bg-accent text-white rounded-xl hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+            >
+              {t.savePassword}
+            </button>
+          </form>
+        </motion.div>
+
         {/*
-          Barra de guardar: fica DENTRO da coluna da página (sticky, não fixed),
-          por isso nunca sai da coluna e não cobre o botão nem o painel do chat.
-          Só existe quando há alterações.
+          Save bar: sits INSIDE the page column (sticky, not fixed), so it never
+          leaves the column and does not cover the button or the chat panel.
+          It only exists when there are changes.
         */}
         <AnimatePresence>
           {isDirty && (

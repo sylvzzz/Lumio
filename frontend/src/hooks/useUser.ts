@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { texts, type Lang, type TextKey } from '@/i18n'
 
 export interface UserProfile {
+  email?: string | null
   name?: string | null
   gender?: string | null
   age?: number | null

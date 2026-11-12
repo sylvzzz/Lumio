@@ -16,7 +16,7 @@ if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
     echo "No data found, initializing database ..."
 
     # init creates the PG_VERSION for the above if conditon
-    su postgres -c "initdb -D /var/lib/postgresql/data"
+    su postgres -c "initdb -D /var/lib/postgresql/data --encoding=UTF8 --locale=C.UTF-8"
 
     su postgres -c "pg_ctl -D /var/lib/postgresql/data -o '-c listen_addresses=localhost' -w start"
 
@@ -49,6 +49,9 @@ SQL
 GRANT USAGE ON SCHEMA public TO "$DB_USER";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "$DB_USER";
 GRANT EXECUTE ON FUNCTION lumio_login(TEXT, TEXT) TO "$DB_USER";
+GRANT EXECUTE ON FUNCTION lumio_get_credentials(TEXT) TO "$DB_USER";
+GRANT EXECUTE ON FUNCTION lumio_set_password(TEXT, TEXT) TO "$DB_USER";
+GRANT EXECUTE ON FUNCTION lumio_register(TEXT, TEXT, TEXT) TO "$DB_USER";
 SQL
 
     echo "Stopping temporary PostgreSQL server ..."

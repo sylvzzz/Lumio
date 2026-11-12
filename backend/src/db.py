@@ -19,7 +19,7 @@ def _conn_params() -> dict:
     """DATABASE_URL (local dev) or the compose-mounted secrets."""
     url = os.environ.get("DATABASE_URL")
     if url:
-        return {"conninfo": url}
+        return {"conninfo": url, "client_encoding": "UTF8"}
 
     def secret(name: str) -> str:
         try:
@@ -33,6 +33,7 @@ def _conn_params() -> dict:
         "dbname": secret("db_name"),
         "user": secret("db_user"),
         "password": secret("db_password"),
+        "client_encoding": "UTF8",
     }
 
 
@@ -49,8 +50,8 @@ def _ser(row: dict | None) -> dict | None:
 class DB:
     """All SQL Lumio runs, one instance per request, scoped to one user by RLS.
 
-    # ponytail: uma ligação nova por `with` (sem pool); psycopg_pool se a
-    # concorrência/latência das ligações alguma vez pesar.
+    # ponytail: one new connection per `with` (no pool); psycopg_pool if
+    # connection concurrency/latency ever becomes a problem.
     """
 
     _USER_COLS = "id, email, google_id, name, gender, age, language, created_at"
@@ -110,6 +111,39 @@ class DB:
 
     def get_user(self) -> dict | None:
         return self.fetch_one(f"SELECT {self._USER_COLS} FROM users")
+
+    # -- password auth (hash is never part of _USER_COLS) -----------------
+
+    def get_credentials(self, email: str) -> dict | None:
+        """{id, name, password_hash} for an email, or None (security definer, pre-session)."""
+        return self.fetch_one("SELECT * FROM lumio_get_credentials(%s)", [email])
+
+    def set_password_by_email(self, email: str, password_hash: str) -> str:
+        """Create-or-update the user's password hash by email (security definer)."""
+        return self.fetch_one("SELECT lumio_set_password(%s, %s) AS id", [email, password_hash])["id"]
+
+    def register(self, email: str, name: str | None, password_hash: str) -> str | None:
+        """Create a new password account; None if the email already has an account."""
+        return self.fetch_one("SELECT lumio_register(%s, %s, %s) AS id",
+                              [email, name, password_hash])["id"]
+
+    def get_password_hash(self) -> str | None:
+        row = self.fetch_one("SELECT password_hash FROM users")
+        return row["password_hash"] if row else None
+
+    def clear_password_hash(self) -> None:
+        """Remove the current user's password (RLS-scoped)."""
+        self.execute(
+            "UPDATE users SET password_hash = NULL, password_updated_at = NULL WHERE id = %s",
+            [self.user_id],
+        )
+
+    def set_password_hash(self, password_hash: str) -> None:
+        """Update the current user's own hash (RLS-scoped)."""
+        self.execute(
+            "UPDATE users SET password_hash = %s, password_updated_at = NOW() WHERE id = %s",
+            [password_hash, self.user_id],
+        )
 
     def update_user(self, fields: dict) -> dict:
         return self._update("users", self.user_id, fields,
