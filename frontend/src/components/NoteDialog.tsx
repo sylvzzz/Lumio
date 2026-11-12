@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Trash2, Save } from 'lucide-react'
+import { toast } from 'sonner'
 import { api, type Note } from '@/lib/api'
 import {
   Dialog,
@@ -28,6 +29,7 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
   }, [note])
 
   const isNew = !note
+  const titleOf = (value: string) => value.split('\n')[0].trim() || t.untitled
 
   const handleSave = async () => {
     setSaving(true)
@@ -38,9 +40,11 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
         await api.notes.update(note.id, { content })
       }
       queryClient.invalidateQueries({ queryKey: ['notes'] })
+      toast.success(t.notifyNoteSaved.replace('{title}', () => titleOf(content)))
       onClose()
     } catch (e) {
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setSaving(false)
   }
@@ -51,9 +55,11 @@ export function NoteDialog({ note, open, onClose }: NoteDialogProps) {
     try {
       await api.notes.delete(note.id)
       queryClient.invalidateQueries({ queryKey: ['notes'] })
+      toast.success(t.notifyNoteDeleted.replace('{title}', () => titleOf(note.content)))
       onClose()
     } catch (e) {
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setSaving(false)
   }

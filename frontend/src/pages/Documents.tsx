@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { FileText, FileSpreadsheet, Upload, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -40,6 +40,9 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+const UPLOAD_ANIMATION_MS = 3000
+const UPLOAD_HOLD_MS = 400
+
 export function Documents() {
   const shouldReduceMotion = useReducedMotion()
   const t = useT()
@@ -56,6 +59,9 @@ export function Documents() {
   const [docToDelete, setDocToDelete] = useState<Document | null>(null)
   const [deleting, setDeleting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const uploadRaf = useRef(0)
+
+  useEffect(() => () => cancelAnimationFrame(uploadRaf.current), [])
 
   const handleDelete = useCallback(async () => {
     if (!docToDelete) return
@@ -63,28 +69,58 @@ export function Documents() {
     try {
       await api.documents.delete(docToDelete.id)
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      toast.success(t.notifyDocumentDeleted.replace('{name}', () => docToDelete.filename))
       setDocToDelete(null)
     } catch (e) {
       console.error('Delete failed', e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setDeleting(false)
-  }, [docToDelete, queryClient])
+  }, [docToDelete, queryClient, t.notifyDocumentDeleted, t.actionFailed, t.tryAgain])
 
   const handleUpload = useCallback(async (file: File) => {
+    if (uploading) return
     setUploading(true)
     setUploadFileName(file.name)
     setUploadProgress(0)
+
+    const started = performance.now()
+    let realDone = false
+    let lastPct = -1
+    const tick = () => {
+      const elapsed = performance.now() - started
+      const timePct = Math.floor((Math.min(elapsed, UPLOAD_ANIMATION_MS) / UPLOAD_ANIMATION_MS) * 100)
+      const pct = realDone ? timePct : Math.min(99, timePct)
+      if (pct !== lastPct) {
+        lastPct = pct
+        setUploadProgress(pct)
+      }
+      if (elapsed < UPLOAD_ANIMATION_MS) uploadRaf.current = requestAnimationFrame(tick)
+    }
+    uploadRaf.current = requestAnimationFrame(tick)
+
     try {
-      await api.documents.upload(file, undefined, (p) => setUploadProgress(p))
-      toast.success(file.name, { description: t.uploadedSuccessfully })
+      const upload = api.documents.upload(file).then((doc) => {
+        realDone = true
+        return doc
+      })
+      await Promise.all([
+        upload,
+        new Promise<void>((resolve) => setTimeout(resolve, UPLOAD_ANIMATION_MS)),
+      ])
+      cancelAnimationFrame(uploadRaf.current)
+      setUploadProgress(100)
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      toast.success(t.notifyDocumentSaved.replace('{name}', () => file.name))
+      await new Promise((resolve) => setTimeout(resolve, UPLOAD_HOLD_MS))
     } catch (e) {
+      cancelAnimationFrame(uploadRaf.current)
       console.error('Upload failed', e)
       toast.error(t.uploadFailed, { description: t.tryAgain })
     }
     setUploading(false)
     setUploadProgress(0)
-  }, [queryClient, t.uploadedSuccessfully, t.uploadFailed, t.tryAgain])
+  }, [uploading, queryClient, t.notifyDocumentSaved, t.uploadFailed, t.tryAgain])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -163,9 +199,7 @@ export function Documents() {
                   style={{
                     transform: `scaleX(${uploadProgress / 100})`,
                     transformOrigin: 'left',
-                    transition: shouldReduceMotion
-                      ? 'none'
-                      : 'transform 250ms cubic-bezier(0.23, 1, 0.32, 1)',
+                    transition: 'none',
                   }}
                 />
               </div>

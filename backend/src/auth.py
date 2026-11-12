@@ -105,7 +105,11 @@ def verify_password(stored_hash: str | None, password: str) -> tuple[bool, str |
 
 
 class LoginThrottle:
-    """Blocks a key (email) after N failures within a time window."""
+    """Blocks a key (client IP) after N failures within a time window.
+
+    Keyed by IP, never by account, so an attacker cannot lock a victim out
+    by failing logins against their email.
+    """
 
     def __init__(self, max_failures: int = 5, window_s: int = 15 * 60, max_keys: int = 10_000):
         self.max_failures = max_failures
@@ -135,7 +139,7 @@ class LoginThrottle:
         now = time.monotonic()
         with self._lock:
             if len(self._fails) >= self.max_keys and key not in self._fails:
-                # protects memory against mass-invented emails
+                # protects memory against a flood of invented keys
                 for k in list(self._fails):
                     self._prune(k, now)
                 if len(self._fails) >= self.max_keys:

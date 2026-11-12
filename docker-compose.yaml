@@ -3,15 +3,11 @@ services:
     build: ./frontend
     depends_on:
       - backend
-    ports:
-      - "5173:5173"
     networks:
       - lumio
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
     networks:
       - lumio
     volumes:
@@ -42,8 +38,6 @@ services:
       - db_root_password
       - db_admin_password
       - db_password
-    ports:
-      - "5432:5432"
     volumes:
       - ./lumio/data/postgres:/var/lib/postgresql/data
     networks:
@@ -56,7 +50,7 @@ services:
     depends_on:
       - database
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - lumio
 

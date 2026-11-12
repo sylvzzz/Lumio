@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -53,6 +54,24 @@ ALLOWED_SUFFIXES = (".pdf", ".docx", ".md", ".txt")
 app = FastAPI(title="Lumio RAG")
 
 
+def _client_ip(request: Request) -> str:
+    """Real client IP. nginx overwrites X-Forwarded-For with $remote_addr."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _session_epoch(uid: str) -> str | None:
+    with DB(uid) as db:
+        return db.get_auth_epoch()
+
+
+def _session_matches(uid: str | None, epoch: str | None) -> bool:
+    """Server-side revocation check: cookie epoch must match the user row."""
+    return bool(uid and epoch) and _session_epoch(uid) == epoch
+
+
 class PrefixMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         path = request.scope.get("path", "")
@@ -64,8 +83,20 @@ class PrefixMiddleware(BaseHTTPMiddleware):
 
 class AuthGateMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if request.url.path in PUBLIC_PATHS or request.session.get("user"):
+        if request.url.path in PUBLIC_PATHS:
             return await call_next(request)
+        user = request.session.get("user")
+        if user:
+            try:
+                valid = await run_in_threadpool(
+                    _session_matches, user.get("id"), request.session.get("sv")
+                )
+            except Exception:
+                # DB unavailable: keep the (signed) cookie instead of logging out.
+                return JSONResponse({"detail": "unavailable"}, status_code=503)
+            if valid:
+                return await call_next(request)
+            request.session.clear()      # revoked/expired: drop the stale cookie
         if "text/html" in request.headers.get("accept", ""):
             return RedirectResponse("/")            # direct browser navigation -> SPA shows the login screen
         return JSONResponse({"detail": "unauthorized"}, status_code=401)
@@ -215,8 +246,7 @@ async def auth_callback(request: Request):
             user_id = db.login(email, info.get("sub"))
     except Exception:
         return RedirectResponse("/auth-error?reason=failed")
-    request.session.clear()
-    request.session["user"] = {"id": user_id, "email": email, "name": info.get("name")}
+    _start_session(request, user_id, email, info.get("name"))
     return RedirectResponse("/")
 
 def _drop_unverified_password(db: DB, email: str) -> None:
@@ -256,13 +286,15 @@ def _start_session(request: Request, user_id: str, email: str, name: str | None)
     request.session.clear()
     user = {"id": user_id, "email": email, "name": name}
     request.session["user"] = user
+    request.session["sv"] = _session_epoch(user_id)
     return user
 
 
 @app.post("/auth/login")
 def password_login(body: PasswordLogin, request: Request) -> dict:
     email = body.email.strip().lower()
-    wait = login_throttle.retry_after(email)
+    ip = _client_ip(request)          # throttle by IP, never by account (no lockout DoS)
+    wait = login_throttle.retry_after(ip)
     if wait:
         raise HTTPException(status_code=429, detail="too_many_attempts",
                             headers={"Retry-After": str(wait)})
@@ -273,10 +305,10 @@ def password_login(body: PasswordLogin, request: Request) -> dict:
             cred = db.get_credentials(email)
     ok, new_hash = auth.verify_password(cred["password_hash"] if cred else None, body.password)
     if not ok or not cred:
-        login_throttle.fail(email)
+        login_throttle.fail(ip)
         raise HTTPException(status_code=401, detail="invalid_credentials")
 
-    login_throttle.reset(email)
+    login_throttle.reset(ip)
     if new_hash:  # Argon2 parameters changed since the hash was created
         with DB(cred["id"]) as db:
             db.set_password_hash(new_hash)
@@ -299,7 +331,8 @@ def password_register(body: PasswordRegister, request: Request) -> dict:
     """Registers account (if ALLOWED_EMAILS is empty accepts every email)."""
     email = body.email.strip().lower()
     name = body.name.strip()[:100] or None
-    wait = login_throttle.retry_after(f"reg:{email}")
+    ip = _client_ip(request)
+    wait = login_throttle.retry_after(f"reg:{ip}")
     if wait:
         raise HTTPException(status_code=429, detail="too_many_attempts",
                             headers={"Retry-After": str(wait)})
@@ -310,12 +343,12 @@ def password_register(body: PasswordRegister, request: Request) -> dict:
         raise HTTPException(status_code=422, detail=problem)
 
     if not email_allowed(email):
-        login_throttle.fail(f"reg:{email}")
+        login_throttle.fail(f"reg:{ip}")
         raise HTTPException(status_code=403, detail="not_allowed")
     with DB() as db:
         user_id = db.register(email, name, auth.hash_password(body.password))
     if not user_id:
-        login_throttle.fail(f"reg:{email}")
+        login_throttle.fail(f"reg:{ip}")
         raise HTTPException(status_code=409, detail="email_taken")
     return _start_session(request, user_id, email, name)
 
@@ -340,7 +373,7 @@ def set_password(body: PasswordChange, request: Request) -> dict:
     if problem:
         raise HTTPException(status_code=422, detail=problem)
 
-    wait = login_throttle.retry_after(email)
+    wait = login_throttle.retry_after(uid)
     if wait:
         raise HTTPException(status_code=429, detail="too_many_attempts",
                             headers={"Retry-After": str(wait)})
@@ -350,10 +383,12 @@ def set_password(body: PasswordChange, request: Request) -> dict:
         if current:
             ok, _ = auth.verify_password(current, body.current_password or "")
             if not ok:
-                login_throttle.fail(email)
+                login_throttle.fail(uid)
                 raise HTTPException(status_code=403, detail="wrong_current_password")
         db.set_password_hash(auth.hash_password(body.new_password))
-    login_throttle.reset(email)
+        # Password change revokes every other session; keep this one valid.
+        request.session["sv"] = db.get_auth_epoch()
+    login_throttle.reset(uid)
     return {}
 
 
@@ -363,6 +398,13 @@ def me(request: Request) -> dict:
 
 @app.post("/logout")
 def logout(request: Request) -> dict:
+    uid = (request.session.get("user") or {}).get("id")
+    if uid:
+        try:
+            with DB(uid) as db:
+                db.bump_auth_epoch()      # revokes this and every other session
+        except Exception:
+            pass
     request.session.clear()
     return {}
 

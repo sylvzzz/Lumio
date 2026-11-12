@@ -139,10 +139,14 @@ export function Settings() {
 
   const savePassword = async () => {
     if (pwSaving) return
+    const fail = (message: string) => {
+      setPwError(message)
+      toast.error(t.actionFailed, { description: message })
+    }
     setPwError(null)
-    if (newPw.length < 10) return setPwError(t.passwordTooShort)
-    if (pwScore === null || pwScore < MIN_ACCEPTED_SCORE) return setPwError(t.passwordTooWeak)
-    if (newPw !== confirmPw) return setPwError(t.passwordMismatch)
+    if (newPw.length < 10) return fail(t.passwordTooShort)
+    if (pwScore === null || pwScore < MIN_ACCEPTED_SCORE) return fail(t.passwordTooWeak)
+    if (newPw !== confirmPw) return fail(t.passwordMismatch)
     setPwSaving(true)
     try {
       await api.auth.setPassword(newPw, hasPassword ? currentPw : undefined)
@@ -153,7 +157,7 @@ export function Settings() {
       toast.success(t.passwordSaved, { description: t.passwordSavedDescription })
     } catch (e) {
       const code = e instanceof PasswordError ? e.code : 'failed'
-      setPwError(
+      fail(
         code === 'too_short' ? t.passwordTooShort
         : code === 'too_long' ? t.passwordTooLong
         : code === 'too_weak' ? t.passwordTooWeak

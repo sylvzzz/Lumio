@@ -112,6 +112,23 @@ class DB:
     def get_user(self) -> dict | None:
         return self.fetch_one(f"SELECT {self._USER_COLS} FROM users")
 
+    # -- session revocation (RLS-scoped) ---------------------------------
+    # `password_updated_at` (or `created_at` while no password was ever set)
+    # doubles as the session epoch: the session carries the value it was
+    # created with, and any later change invalidates it. Logout bumps it,
+    # revoking every session for the user.
+
+    def get_auth_epoch(self) -> str | None:
+        row = self.fetch_one(
+            "SELECT COALESCE(password_updated_at, created_at)::text AS auth_epoch FROM users"
+        )
+        return row["auth_epoch"] if row else None
+
+    def bump_auth_epoch(self) -> None:
+        self.execute("UPDATE users SET password_updated_at = NOW() WHERE id = %s",
+                     [self.user_id])
+
+
     # -- password auth (hash is never part of _USER_COLS) -----------------
 
     def get_credentials(self, email: str) -> dict | None:

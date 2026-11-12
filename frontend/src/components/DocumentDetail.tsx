@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { FileText, FileSpreadsheet, Download, FileIcon, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { api, type Document } from '@/lib/api'
 import {
   Dialog,
@@ -66,9 +67,11 @@ export function DocumentDetail({ doc, open, onClose }: DocumentDetailProps) {
     try {
       await api.documents.delete(doc.id)
       queryClient.invalidateQueries({ queryKey: ['documents'] })
+      toast.success(t.notifyDocumentDeleted.replace('{name}', () => doc.filename))
       onClose()
     } catch (e) {
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setDeleting(false)
   }

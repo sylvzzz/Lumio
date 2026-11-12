@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Save } from 'lucide-react'
+import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import {
   Dialog,
@@ -78,9 +79,11 @@ export function EventDialog({ open, onClose, initialDate }: EventDialogProps) {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })
       queryClient.invalidateQueries({ queryKey: ['calendar-events'] })
+      toast.success(t.notifyCalendarAdded.replace('{title}', () => title.trim()))
       onClose()
     } catch (e) {
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setSaving(false)
   }

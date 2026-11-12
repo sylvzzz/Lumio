@@ -76,6 +76,19 @@ const pt = {
   save: 'Guardar',
   saving: 'A guardar...',
 
+  // action notifications
+  actionFailed: 'Não foi possível concluir a ação',
+  untitled: 'Sem título',
+  notifyCalendarAdded: '{title} adicionado ao calendário',
+  notifyNoteSaved: '{title} anotado',
+  notifyNoteDeleted: '{title} apagado',
+  notifyTaskSaved: '{title} guardado em tarefas',
+  notifyTaskCompleted: '{title} concluída',
+  notifyTaskReopened: '{title} reaberta',
+  notifyTaskDeleted: '{title} apagada',
+  notifyDocumentSaved: '{name} guardado com sucesso',
+  notifyDocumentDeleted: '{name} apagado',
+
   // tasks
   tasksTitle: 'Tarefas',
   tasksSubtitle: 'Aponta as tuas tarefas.',
@@ -125,7 +138,6 @@ const pt = {
   dropFile: 'Larga um ficheiro aqui ou clica para procurar',
   fileTypesHint: 'PDF, CSV ou TXT — até 10 MB',
   uploading: 'A carregar',
-  uploadedSuccessfully: 'Carregado com sucesso',
   uploadFailed: 'Falha no upload',
   tryAgain: 'Tenta outra vez.',
   noDocumentsYet: 'Ainda sem documentos',
@@ -371,6 +383,19 @@ const en: Record<TextKey, string> = {
   save: 'Save',
   saving: 'Saving...',
 
+  // action notifications
+  actionFailed: 'Could not complete the action',
+  untitled: 'Untitled',
+  notifyCalendarAdded: '{title} added to calendar',
+  notifyNoteSaved: '{title} saved as a note',
+  notifyNoteDeleted: '{title} deleted',
+  notifyTaskSaved: '{title} saved to tasks',
+  notifyTaskCompleted: '{title} completed',
+  notifyTaskReopened: '{title} reopened',
+  notifyTaskDeleted: '{title} deleted',
+  notifyDocumentSaved: '{name} uploaded successfully',
+  notifyDocumentDeleted: '{name} deleted',
+
   tasksTitle: 'Tasks',
   tasksSubtitle: 'Keep track of what matters.',
   filterAll: 'All',
@@ -417,7 +442,6 @@ const en: Record<TextKey, string> = {
   dropFile: 'Drop a file here or click to browse',
   fileTypesHint: 'PDF, CSV or TXT — up to 10 MB',
   uploading: 'Uploading',
-  uploadedSuccessfully: 'Uploaded successfully',
   uploadFailed: 'Upload failed',
   tryAgain: 'Please try again.',
   noDocumentsYet: 'No documents yet',

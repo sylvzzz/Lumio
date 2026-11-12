@@ -4,6 +4,7 @@ import { CheckSquare, Plus, Trash2, CheckCircle2 } from 'lucide-react'
 import { useTasks } from '@/hooks/use-tasks'
 import { api, type Task } from '@/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useT, useLang } from '@/hooks/useUser'
 import { tasksRemainingLabel, tasksCompletedLabel } from '@/i18n'
@@ -38,15 +39,21 @@ export function Tasks() {
   }, [tasks, filter])
 
   const toggleTask = async (task: Task) => {
+    const done = !task.done
     queryClient.setQueryData<Task[]>(['tasks'], (old) =>
-      old?.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)) ?? old,
+      old?.map((item) => (item.id === task.id ? { ...item, done } : item)) ?? old,
     )
     try {
-      await api.tasks.update(task.id, { done: !task.done })
+      await api.tasks.update(task.id, { done })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(
+        (done ? t.notifyTaskCompleted : t.notifyTaskReopened)
+          .replace('{title}', () => task.title),
+      )
     } catch (e) {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
   }
 
@@ -58,22 +65,26 @@ export function Tasks() {
     try {
       await api.tasks.create({ title })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(t.notifyTaskSaved.replace('{title}', () => title))
     } catch (e) {
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
     setAdding(false)
   }
 
-  const deleteTask = async (id: string) => {
+  const deleteTask = async (task: Task) => {
     queryClient.setQueryData<Task[]>(['tasks'], (old) =>
-      old?.filter((t) => t.id !== id) ?? old,
+      old?.filter((item) => item.id !== task.id) ?? old,
     )
     try {
-      await api.tasks.delete(id)
+      await api.tasks.delete(task.id)
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      toast.success(t.notifyTaskDeleted.replace('{title}', () => task.title))
     } catch (e) {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       console.error(e)
+      toast.error(t.actionFailed, { description: t.tryAgain })
     }
   }
 
@@ -244,7 +255,7 @@ export function Tasks() {
                         </motion.span>
                       </motion.button>
                       <motion.button
-                        onClick={() => deleteTask(task.id)}
+                        onClick={() => deleteTask(task)}
                         aria-label={t.deleteTask}
                         className="h-11 w-11 lg:h-7 lg:w-7 flex items-center justify-center rounded-lg text-muted-foreground/50 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:text-destructive hover:bg-destructive/5 transition-all"
                         whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}

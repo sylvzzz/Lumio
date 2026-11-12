@@ -39,10 +39,11 @@ Lumio brings your productivity tools together into one clean, Apple-inspired wor
 ## How it works
 
 ```
-Browser ──▶ nginx (HTTPS :443) ──▶ React app (Vite :5173) ──/api──▶ FastAPI (:8000) ──▶ PostgreSQL
-                                                                         │
-                                                                         ├──▶ BM25 index (per user, on disk)
-                                                                         └──▶ LLM provider (Groq / OpenAI / DeepSeek)
+Browser ──▶ nginx (HTTPS :443) ──┬──▶ React app (static :80)
+                                  └──/api──▶ FastAPI (:8000) ──▶ PostgreSQL
+                                                    │
+                                                    ├──▶ BM25 index (per user, on disk)
+                                                    └──▶ LLM provider (Groq / OpenAI / DeepSeek)
 ```
 
 1. You sign in with Google. Only emails listed in `ALLOWED_EMAILS` are accepted.
@@ -143,13 +144,15 @@ The certificate is self-signed, so your browser will ask you to accept the excep
 
 | Service | Port | Description |
 |---|---|---|
-| nginx | 443 | HTTPS entry point (self-signed certificate) |
-| frontend | 5173 | React app (Vite dev server), proxies `/api` to the backend |
-| backend | 8000 | FastAPI application |
-| database | 5432 | PostgreSQL |
-| adminer | 8080 | Web UI to inspect the database |
+| nginx | 443 | HTTPS entry point (self-signed certificate); serves the API and the app |
+| frontend | 80 | Static React build, served internally by nginx |
+| backend | 8000 | FastAPI application (internal only) |
+| database | 5432 | PostgreSQL (internal only; inspect it through Adminer or `docker compose exec`) |
+| adminer | 8080 | Database UI (bound to `127.0.0.1` on the host) |
 
-> If you deploy Lumio on a server, don't expose the database, Adminer, backend and frontend ports to the internet. Only `443` should be public.
+> Only `443` is published. Frontend, backend and database are reachable only
+> through the internal Docker network; Adminer binds to `127.0.0.1` so Docker's
+> port publishing cannot bypass the firewall.
 
 ## API overview
 

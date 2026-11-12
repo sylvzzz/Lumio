@@ -270,9 +270,6 @@ export const api = {
     list: () => fetchJSON<CalendarEvent[]>('/calendar-events/'),
     create: (data: CalendarEventInput) => mutate<CalendarEvent>('/calendar-events/', 'POST', data),
   },
-  emails: {
-    list: () => fetchJSON<Email[]>('/emails/'),
-  },
   tasks: {
     list: () => fetchJSON<Task[]>('/tasks/'),
     create: (data: { title: string }) => mutate<Task>('/tasks/', 'POST', data),
@@ -283,20 +280,13 @@ export const api = {
     list: () => fetchJSON<Document[]>('/documents/'),
     folders: () => fetchJSON<DocumentFolder[]>('/document-folders/'),
     delete: (id: string) => mutate<void>(`/documents/${id}/`, 'DELETE'),
-    upload: (file: File, folder?: string, onProgress?: (percent: number) => void) =>
+    upload: (file: File, folder?: string) =>
       new Promise<Document>((resolve, reject) => {
         const form = new FormData()
         form.append('file', file)
         if (folder) form.append('folder', folder)
         const xhr = new XMLHttpRequest()
         xhr.open('POST', `${API_BASE}/documents/`)
-        if (onProgress) {
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              onProgress(Math.min(99, Math.round((e.loaded / e.total) * 99)))
-            }
-          }
-        }
         xhr.onload = () => {
           if (xhr.status === 401) return redirectToLogin()
           if (xhr.status >= 200 && xhr.status < 300) {
